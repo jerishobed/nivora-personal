@@ -1,0 +1,6 @@
+{
+  "name": "NIVORA",
+  "description": "Personal Journal, Finance Intelligence & AI Insights",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "User": {
+      "fields": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "JournalEntry": {
+      "fields": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "date": { "type": "string" },
+        "tags": { "type": "array" }
+      }
+    },
+    "Transaction": {
+      "fields": {
+        "amount": { "type": "number" },
+        "type": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    }
+  }
+}
