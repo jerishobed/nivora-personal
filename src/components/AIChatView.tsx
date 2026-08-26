@@ -11,7 +11,8 @@ import {
 import {
   subscribeToConversations,
   saveConversation,
-  deleteConversation as deleteFirestoreConv
+  deleteConversation as deleteFirestoreConv,
+  getCurrentIdToken
 } from '../lib/firebase';
 import {
   ArrowLeft,
@@ -313,9 +314,18 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
         text: m.text
       }));
 
+      // Retrieve Firebase ID Token for server-side verification
+      const idToken = await getCurrentIdToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (idToken) {
+        headers['Authorization'] = `Bearer ${idToken}`;
+      }
+
       const res = await fetch('/api/ai/ask', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           prompt: query,
           journalEntries,
@@ -325,6 +335,10 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
       });
 
       if (!res.ok) {
+        if (res.status === 429) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Too many AI requests. Please try again shortly.');
+        }
         throw new Error('API response returned an error status.');
       }
 
@@ -349,10 +363,14 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
     } catch (err: any) {
       console.warn('AI Assistant request note:', err?.message || err);
 
+      const errorMessage = err?.message && err.message.includes('Too many AI requests')
+        ? 'Too many AI requests. Please wait a moment before asking another question.'
+        : 'Sorry, I couldn\'t generate that insight right now.';
+
       const errAiMessage: ChatMessage = {
         id: `ai-err-${Date.now()}`,
         sender: 'assistant',
-        text: 'Sorry, I couldn\'t generate that insight right now.',
+        text: errorMessage,
         timestamp: Date.now(),
         isError: true,
         suggestedFollowUps: [

@@ -70,6 +70,12 @@ export const logoutUser = async (): Promise<void> => {
   await signOut(auth);
 };
 
+export const getCurrentIdToken = async (forceRefresh = false): Promise<string | null> => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) return null;
+  return await currentUser.getIdToken(forceRefresh);
+};
+
 export const mapFirebaseUser = (user: FirebaseUser | null): UserProfile | null => {
   if (!user) return null;
   return {
