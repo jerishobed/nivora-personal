@@ -23,7 +23,7 @@ import {
   orderBy,
   serverTimestamp
 } from 'firebase/firestore';
-import { JournalEntry, Transaction, UserProfile, Conversation, UserPreferences, SUPPORTED_CURRENCIES } from '../types';
+import { JournalEntry, Transaction, UserProfile, Conversation, UserPreferences, SUPPORTED_CURRENCIES, Goal } from '../types';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 
 const config = firebaseConfigJson as Record<string, any>;
@@ -442,5 +442,69 @@ export const deleteConversation = async (uid: string, convId: string): Promise<v
   } catch (err) {
     console.warn('Error deleting conversation from Firestore:', err);
   }
+};
+
+// Goals Firestore subscriptions and management
+export const subscribeToGoals = (
+  uid: string,
+  callback: (goals: Goal[]) => void,
+  onError?: (err: any) => void
+) => {
+  const goalsCollection = collection(db, 'users', uid, 'goals');
+  const q = query(goalsCollection, orderBy('createdAt', 'desc'));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: Goal[] = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          title: data.title || 'Goal',
+          targetAmount: Number(data.targetAmount) || 0,
+          currentAmount: Number(data.currentAmount) || 0,
+          category: data.category || 'savings',
+          targetDate: data.targetDate,
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString()
+        };
+      });
+      callback(items);
+    },
+    (error) => {
+      console.warn('Firestore goals subscription error:', error);
+      if (onError) onError(error);
+    }
+  );
+};
+
+export const saveGoal = async (
+  uid: string,
+  goal: Partial<Goal> & { title: string; targetAmount: number }
+): Promise<string> => {
+  const goalsCollection = collection(db, 'users', uid, 'goals');
+  const goalId = goal.id || doc(goalsCollection).id;
+  const docRef = doc(db, 'users', uid, 'goals', goalId);
+  const now = new Date().toISOString();
+
+  const dataToSave = {
+    id: goalId,
+    title: goal.title.trim(),
+    targetAmount: Number(goal.targetAmount) || 0,
+    currentAmount: Number(goal.currentAmount) || 0,
+    category: goal.category || 'savings',
+    targetDate: goal.targetDate || '',
+    createdAt: goal.createdAt || now,
+    updatedAt: now,
+    _serverTimestamp: serverTimestamp()
+  };
+
+  await setDoc(docRef, dataToSave, { merge: true });
+  return goalId;
+};
+
+export const deleteGoal = async (uid: string, goalId: string): Promise<void> => {
+  const docRef = doc(db, 'users', uid, 'goals', goalId);
+  await deleteDoc(docRef);
 };
 

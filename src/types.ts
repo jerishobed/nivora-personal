@@ -82,6 +82,37 @@ export interface Conversation {
   messages: ChatMessage[];
 }
 
+export interface Goal {
+  id: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  category: 'savings' | 'investment' | 'travel' | 'wellness' | 'education' | 'other';
+  targetDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ImpulseAnalysis {
+  verdict: 'proceed' | 'pause_24h' | 'reconsider';
+  headline: string;
+  rationale: string;
+  budgetImpact: string;
+  emotionalReflection: string;
+  actionStep: string;
+}
+
+export interface WeeklyDigest {
+  weekRange: string;
+  dominantMood: string;
+  totalIncome: number;
+  totalExpense: number;
+  netSaved: number;
+  reflectionsCount: number;
+  keyCorrelation: string;
+  mantra: string;
+}
+
 export interface FinanceSummary {
   totalIncome: number;
   totalExpense: number;

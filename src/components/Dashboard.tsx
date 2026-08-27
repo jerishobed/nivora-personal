@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { UserProfile, JournalEntry, Transaction, ViewTab } from '../types';
+import { UserProfile, JournalEntry, Transaction, ViewTab, Goal } from '../types';
 import { UserCard } from './UserCard';
+import { GoalsSection } from './GoalsSection';
 import { formatCurrency, shareContent } from '../lib/firebase';
 import {
   BookOpen,
@@ -14,7 +15,11 @@ import {
   Layers,
   Sparkle,
   Share2,
-  Check
+  Check,
+  Mic,
+  ShoppingBag,
+  CalendarDays,
+  Target
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -22,12 +27,18 @@ interface DashboardProps {
   currency?: string;
   journalEntries: JournalEntry[];
   transactions: Transaction[];
+  goals: Goal[];
   onNavigate: (tab: ViewTab) => void;
   onSignOut: () => void;
   onOpenSettings?: () => void;
   onSeedData: () => void;
   onNewJournal: () => void;
   onNewTransaction: () => void;
+  onSaveGoal: (goal: Partial<Goal> & { title: string; targetAmount: number }) => Promise<void>;
+  onDeleteGoal: (goalId: string) => Promise<void>;
+  onOpenVoiceMemo: () => void;
+  onOpenImpulseCoach: () => void;
+  onOpenWeeklyDigest: () => void;
   seedingLoading?: boolean;
 }
 
@@ -36,12 +47,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
   currency = 'USD',
   journalEntries,
   transactions,
+  goals = [],
   onNavigate,
   onSignOut,
   onOpenSettings,
   onSeedData,
   onNewJournal,
   onNewTransaction,
+  onSaveGoal,
+  onDeleteGoal,
+  onOpenVoiceMemo,
+  onOpenImpulseCoach,
+  onOpenWeeklyDigest,
   seedingLoading = false
 }) => {
   const [shareCopied, setShareCopied] = useState(false);
@@ -143,6 +160,69 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
+      {/* AI Quick Intelligence Actions Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* 1. Voice Memo */}
+        <button
+          id="dashboard-action-voicememo"
+          onClick={onOpenVoiceMemo}
+          className="p-4 rounded-[20px] bg-gradient-to-r from-[#fffdfb] to-[#f5f1eb] border border-[#e8ddd2] hover:border-[#7b4a27]/40 shadow-2xs hover:shadow-xs transition-all flex items-center gap-3.5 text-left cursor-pointer group"
+        >
+          <div className="w-11 h-11 rounded-[14px] bg-[#7b4a27] text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+            <Mic className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs sm:text-sm font-bold text-[#1f1b18] flex items-center gap-1.5">
+              <span>Voice-to-Memo</span>
+              <span className="text-[9px] bg-[#f3e8dc] text-[#7b4a27] px-1.5 py-0.2 rounded-full font-bold">AI</span>
+            </h4>
+            <p className="text-[11px] text-[#756b63] line-clamp-1 mt-0.5">
+              Speak thoughts or expenses
+            </p>
+          </div>
+        </button>
+
+        {/* 2. Impulse Coach */}
+        <button
+          id="dashboard-action-impulsecoach"
+          onClick={onOpenImpulseCoach}
+          className="p-4 rounded-[20px] bg-gradient-to-r from-[#fffdfb] to-[#f5f1eb] border border-[#e8ddd2] hover:border-[#7b4a27]/40 shadow-2xs hover:shadow-xs transition-all flex items-center gap-3.5 text-left cursor-pointer group"
+        >
+          <div className="w-11 h-11 rounded-[14px] bg-[#7b4a27] text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+            <ShoppingBag className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs sm:text-sm font-bold text-[#1f1b18] flex items-center gap-1.5">
+              <span>Impulse Coach</span>
+              <span className="text-[9px] bg-[#f3e8dc] text-[#7b4a27] px-1.5 py-0.2 rounded-full font-bold">AI</span>
+            </h4>
+            <p className="text-[11px] text-[#756b63] line-clamp-1 mt-0.5">
+              &ldquo;Should I buy this?&rdquo; check
+            </p>
+          </div>
+        </button>
+
+        {/* 3. Weekly Digest */}
+        <button
+          id="dashboard-action-weeklydigest"
+          onClick={onOpenWeeklyDigest}
+          className="p-4 rounded-[20px] bg-gradient-to-r from-[#fffdfb] to-[#f5f1eb] border border-[#e8ddd2] hover:border-[#7b4a27]/40 shadow-2xs hover:shadow-xs transition-all flex items-center gap-3.5 text-left cursor-pointer group"
+        >
+          <div className="w-11 h-11 rounded-[14px] bg-[#7b4a27] text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+            <CalendarDays className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs sm:text-sm font-bold text-[#1f1b18] flex items-center gap-1.5">
+              <span>Weekly Digest</span>
+              <span className="text-[9px] bg-[#f3e8dc] text-[#7b4a27] px-1.5 py-0.2 rounded-full font-bold">AI</span>
+            </h4>
+            <p className="text-[11px] text-[#756b63] line-clamp-1 mt-0.5">
+              7-day Mind &amp; Money report
+            </p>
+          </div>
+        </button>
+      </div>
+
       {/* 3 Main Feature Cards matching Clean Minimalism design */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1: Journal */}
@@ -224,6 +304,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Smart Goals & Milestone Vision Board */}
+      <GoalsSection
+        goals={goals}
+        currency={currency}
+        onSaveGoal={onSaveGoal}
+        onDeleteGoal={onDeleteGoal}
+      />
 
       {/* Empty State Banner (with one-click seed button) */}
       {!hasData && (

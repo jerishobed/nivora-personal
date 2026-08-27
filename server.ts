@@ -692,6 +692,288 @@ Return strictly valid JSON matching this schema:
   }
 );
 
+// 1. Voice-to-Reflection & Expense Dual Processor
+app.post(
+  '/api/ai/voice-process',
+  requireFirebaseAuth,
+  rateLimitAiRequests,
+  async (req: Request, res: Response) => {
+    try {
+      const { transcript, currency = 'USD' } = req.body;
+      if (!transcript || typeof transcript !== 'string' || !transcript.trim()) {
+        res.status(400).json({ error: 'Transcript is required.' });
+        return;
+      }
+
+      const ai = getAiClient();
+      const systemInstruction = `You are NIVORA AI, a multimodal personal assistant for journaling and finance.
+Analyze the user's spoken voice memo and extract any journal thoughts, financial transactions, or both.
+
+Return strictly valid JSON with this schema:
+{
+  "hasJournal": boolean,
+  "journal": {
+    "title": "Concise title",
+    "content": "Eloquent reflective reflection text",
+    "mood": "calm" | "inspired" | "reflective" | "focused" | "grateful" | "stressed",
+    "tags": ["1-3 short tags"]
+  } | null,
+  "hasTransaction": boolean,
+  "transaction": {
+    "amount": number (positive number only),
+    "type": "income" | "expense",
+    "category": "Food" | "Transport" | "Housing" | "Bills" | "Shopping" | "Health" | "Salary" | "Freelance" | "Other",
+    "description": "Short description of expense or income"
+  } | null,
+  "summary": "Brief 1-sentence confirmation of what was recognized"
+}`;
+
+      const candidateModels = [
+        'gemini-3.1-flash-lite',
+        'gemini-3.5-flash-lite',
+        'gemini-3.5-flash',
+        'gemini-3.6-flash'
+      ];
+
+      let response: any = null;
+      for (const modelName of candidateModels) {
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: `Analyze this spoken voice note (User Currency: ${currency}):\n"${transcript.trim()}"` }]
+              }
+            ],
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json',
+              temperature: 0.3,
+              maxOutputTokens: 600
+            }
+          });
+          if (response?.text) break;
+        } catch (e: any) {
+          console.warn(`[NIVORA AI Voice Process] ${modelName} attempt:`, e?.message || e);
+        }
+      }
+
+      if (!response?.text) {
+        throw new Error('Could not process voice memo.');
+      }
+
+      const parsed = JSON.parse(response.text);
+      res.json(parsed);
+    } catch (err: any) {
+      console.error('[NIVORA Server Error /api/ai/voice-process]:', err?.message || err);
+      // Fallback
+      res.json({
+        hasJournal: true,
+        journal: {
+          title: 'Voice Reflection',
+          content: req.body?.transcript?.trim() || 'Spoken reflection',
+          mood: 'reflective',
+          tags: ['VoiceMemo']
+        },
+        hasTransaction: false,
+        transaction: null,
+        summary: 'Created a voice reflection in your journal.'
+      });
+    }
+  }
+);
+
+// 2. "Should I Buy This?" Impulse Purchase AI Coach
+app.post(
+  '/api/ai/impulse-check',
+  requireFirebaseAuth,
+  rateLimitAiRequests,
+  async (req: Request, res: Response) => {
+    try {
+      const {
+        itemName,
+        price,
+        emotionalState,
+        currency = 'USD',
+        monthlyIncome = 0,
+        monthlyExpense = 0,
+        recentMood = 'reflective'
+      } = req.body;
+
+      if (!itemName || price === undefined) {
+        res.status(400).json({ error: 'Item name and price are required.' });
+        return;
+      }
+
+      const netCash = Number(monthlyIncome) - Number(monthlyExpense);
+      const ai = getAiClient();
+
+      const systemInstruction = `You are NIVORA Impulse Coach, an empathetic, mindful behavioral finance advisor.
+Evaluate if the user should make this purchase right now, considering their financial room and emotional state.
+
+Return strictly valid JSON with this schema:
+{
+  "verdict": "proceed" | "pause_24h" | "reconsider",
+  "headline": "A supportive 1-line verdict title",
+  "rationale": "2-3 sentences explaining the assessment with balance and kindness",
+  "budgetImpact": "1 sentence on cashflow impact",
+  "emotionalReflection": "1 sentence connecting their current mood to purchase psychology",
+  "actionStep": "Concrete next step (e.g., 'Add to wishlist and review tomorrow at 6 PM')"
+}`;
+
+      const prompt = `Item: ${itemName}
+Price: ${currency} ${price}
+Current Feeling / Emotional State: ${emotionalState || 'Normal'}
+Recent Journal Mood: ${recentMood}
+Monthly Income: ${currency} ${monthlyIncome}
+Monthly Expenses: ${currency} ${monthlyExpense}
+Current Net Cash Margin: ${currency} ${netCash}`;
+
+      const candidateModels = [
+        'gemini-3.1-flash-lite',
+        'gemini-3.5-flash-lite',
+        'gemini-3.5-flash',
+        'gemini-3.6-flash'
+      ];
+
+      let response: any = null;
+      for (const modelName of candidateModels) {
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json',
+              temperature: 0.4,
+              maxOutputTokens: 500
+            }
+          });
+          if (response?.text) break;
+        } catch (e: any) {
+          console.warn(`[NIVORA AI Impulse Coach] ${modelName} attempt:`, e?.message || e);
+        }
+      }
+
+      if (!response?.text) {
+        throw new Error('Impulse evaluation failed.');
+      }
+
+      const parsed = JSON.parse(response.text);
+      res.json(parsed);
+    } catch (err: any) {
+      console.error('[NIVORA Server Error /api/ai/impulse-check]:', err?.message || err);
+      res.json({
+        verdict: 'pause_24h',
+        headline: 'Take a Mindful 24-Hour Pause',
+        rationale: `Holding off on buying ${req.body?.itemName || 'this item'} for 24 hours gives your emotional clarity time to align with your financial goals.`,
+        budgetImpact: `Will impact discretionary budget by ${req.body?.currency || '$'} ${req.body?.price || 0}.`,
+        emotionalReflection: 'Emotional check-ins before non-essential purchases protect long-term peace of mind.',
+        actionStep: 'Sleep on it and revisit this decision tomorrow.'
+      });
+    }
+  }
+);
+
+// 3. Weekly "Mind & Money" Visual Summary Digest
+app.post(
+  '/api/ai/weekly-digest',
+  requireFirebaseAuth,
+  rateLimitAiRequests,
+  async (req: Request, res: Response) => {
+    try {
+      const {
+        currency = 'USD',
+        totalIncome = 0,
+        totalExpense = 0,
+        journalsCount = 0,
+        transactionsCount = 0,
+        moodsList = [],
+        categoriesList = []
+      } = req.body;
+
+      const ai = getAiClient();
+      const systemInstruction = `You are NIVORA AI. Generate a concise, inspiring Weekly Mind & Money Digest.
+
+Return strictly valid JSON with this schema:
+{
+  "weekRange": "This Week",
+  "dominantMood": "e.g. Focused (60%)",
+  "netSaved": number,
+  "reflectionsCount": number,
+  "keyCorrelation": "1-2 sentences highlighting how their emotional state and money habits connected this week",
+  "mantra": "A memorable 1-sentence mindful mantra for the upcoming week"
+}`;
+
+      const prompt = `User Stats:
+Currency: ${currency}
+Total Income: ${totalIncome}
+Total Expense: ${totalExpense}
+Net Saved: ${totalIncome - totalExpense}
+Journal Entries Logged: ${journalsCount}
+Transactions Logged: ${transactionsCount}
+Recent Moods: ${moodsList.join(', ') || 'Reflective'}
+Top Categories: ${categoriesList.join(', ') || 'General'}`;
+
+      const candidateModels = [
+        'gemini-3.1-flash-lite',
+        'gemini-3.5-flash-lite',
+        'gemini-3.5-flash'
+      ];
+
+      let response: any = null;
+      for (const modelName of candidateModels) {
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json',
+              temperature: 0.5,
+              maxOutputTokens: 500
+            }
+          });
+          if (response?.text) break;
+        } catch (e: any) {
+          console.warn(`[NIVORA AI Weekly Digest] ${modelName} attempt:`, e?.message || e);
+        }
+      }
+
+      if (!response?.text) {
+        throw new Error('Weekly digest generation failed.');
+      }
+
+      const parsed = JSON.parse(response.text);
+      res.json({
+        weekRange: parsed.weekRange || 'This Week',
+        dominantMood: parsed.dominantMood || 'Reflective',
+        totalIncome: Number(totalIncome) || 0,
+        totalExpense: Number(totalExpense) || 0,
+        netSaved: Number(totalIncome) - Number(totalExpense),
+        reflectionsCount: Number(journalsCount) || 0,
+        keyCorrelation: parsed.keyCorrelation || 'Mindful logging this week supported consistent financial awareness.',
+        mantra: parsed.mantra || 'Clarity in thought creates harmony in wealth.'
+      });
+    } catch (err: any) {
+      console.error('[NIVORA Server Error /api/ai/weekly-digest]:', err?.message || err);
+      const inc = Number(req.body?.totalIncome) || 0;
+      const exp = Number(req.body?.totalExpense) || 0;
+      res.json({
+        weekRange: 'This Week',
+        dominantMood: 'Reflective',
+        totalIncome: inc,
+        totalExpense: exp,
+        netSaved: inc - exp,
+        reflectionsCount: Number(req.body?.journalsCount) || 0,
+        keyCorrelation: 'Consistent tracking between your reflections and spending builds strong self-awareness.',
+        mantra: 'Clarity in thought creates harmony in wealth.'
+      });
+    }
+  }
+);
+
 // Safe 404 handler for undefined /api routes
 app.all('/api/*', (_req: Request, res: Response) => {
   res.status(404).json({ error: 'Endpoint not found.' });

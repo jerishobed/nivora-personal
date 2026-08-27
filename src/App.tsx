@@ -12,9 +12,12 @@ import {
   deleteTransaction,
   seedSampleData,
   subscribeToUserPreferences,
-  saveUserPreferences
+  saveUserPreferences,
+  subscribeToGoals,
+  saveGoal,
+  deleteGoal
 } from './lib/firebase';
-import { UserProfile, JournalEntry, Transaction, ViewTab, UserPreferences } from './types';
+import { UserProfile, JournalEntry, Transaction, ViewTab, UserPreferences, Goal } from './types';
 import { LandingPage } from './components/LandingPage';
 import { BrandHeader } from './components/BrandHeader';
 import { Dashboard } from './components/Dashboard';
@@ -22,6 +25,9 @@ import { JournalView } from './components/JournalView';
 import { FinanceView } from './components/FinanceView';
 import { AIChatView } from './components/AIChatView';
 import { SettingsModal } from './components/SettingsModal';
+import { VoiceMemoModal } from './components/VoiceMemoModal';
+import { ImpulseCoachModal } from './components/ImpulseCoachModal';
+import { WeeklyDigestModal } from './components/WeeklyDigestModal';
 import {
   LayoutDashboard,
   BookOpen,
@@ -39,6 +45,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ViewTab>('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // New AI feature modals
+  const [isVoiceMemoOpen, setIsVoiceMemoOpen] = useState(false);
+  const [isImpulseCoachOpen, setIsImpulseCoachOpen] = useState(false);
+  const [isWeeklyDigestOpen, setIsWeeklyDigestOpen] = useState(false);
+
   // User preferences state
   const [preferences, setPreferences] = useState<UserPreferences>({
     currency: 'USD',
@@ -48,6 +59,7 @@ export default function App() {
   // Firestore collections state
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [seedingLoading, setSeedingLoading] = useState(false);
 
   // Toast notification state
@@ -98,6 +110,16 @@ export default function App() {
       }
     );
 
+    const unsubGoals = subscribeToGoals(
+      currentUser.uid,
+      (goalItems) => {
+        setGoals(goalItems);
+      },
+      (err) => {
+        console.error('Goals subscription error:', err);
+      }
+    );
+
     const unsubPrefs = subscribeToUserPreferences(
       currentUser.uid,
       (prefs) => {
@@ -117,6 +139,7 @@ export default function App() {
     return () => {
       unsubJournal();
       unsubTransactions();
+      unsubGoals();
       unsubPrefs();
     };
   }, [currentUser?.uid]);
@@ -206,6 +229,18 @@ export default function App() {
     if (!currentUser?.uid) return;
     await deleteTransaction(currentUser.uid, id);
     showToast('Transaction deleted.');
+  };
+
+  const handleSaveGoal = async (g: Partial<Goal> & { title: string; targetAmount: number }) => {
+    if (!currentUser?.uid) return;
+    await saveGoal(currentUser.uid, g);
+    showToast(g.id ? 'Goal updated.' : 'Goal created.');
+  };
+
+  const handleDeleteGoal = async (id: string) => {
+    if (!currentUser?.uid) return;
+    await deleteGoal(currentUser.uid, id);
+    showToast('Goal deleted.');
   };
 
   // Loading Screen
@@ -359,12 +394,18 @@ export default function App() {
             currency={preferences.currency}
             journalEntries={journalEntries}
             transactions={transactions}
+            goals={goals}
             onNavigate={setActiveTab}
             onSignOut={handleSignOut}
             onOpenSettings={() => setIsSettingsOpen(true)}
             onSeedData={handleSeedData}
             onNewJournal={() => setActiveTab('journal')}
             onNewTransaction={() => setActiveTab('finance')}
+            onSaveGoal={handleSaveGoal}
+            onDeleteGoal={handleDeleteGoal}
+            onOpenVoiceMemo={() => setIsVoiceMemoOpen(true)}
+            onOpenImpulseCoach={() => setIsImpulseCoachOpen(true)}
+            onOpenWeeklyDigest={() => setIsWeeklyDigestOpen(true)}
             seedingLoading={seedingLoading}
           />
         )}
@@ -403,6 +444,40 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Voice Memo Modal */}
+      {isVoiceMemoOpen && (
+        <VoiceMemoModal
+          isOpen={isVoiceMemoOpen}
+          onClose={() => setIsVoiceMemoOpen(false)}
+          currency={preferences.currency}
+          onSaveJournal={handleSaveJournal}
+          onSaveTransaction={handleSaveTransaction}
+        />
+      )}
+
+      {/* Impulse Purchase Coach Modal */}
+      {isImpulseCoachOpen && (
+        <ImpulseCoachModal
+          isOpen={isImpulseCoachOpen}
+          onClose={() => setIsImpulseCoachOpen(false)}
+          currency={preferences.currency}
+          monthlyIncome={transactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)}
+          monthlyExpense={transactions.filter((t) => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)}
+          recentMood={journalEntries[0]?.mood || 'reflective'}
+        />
+      )}
+
+      {/* Weekly Mind & Money Digest Modal */}
+      {isWeeklyDigestOpen && (
+        <WeeklyDigestModal
+          isOpen={isWeeklyDigestOpen}
+          onClose={() => setIsWeeklyDigestOpen(false)}
+          currency={preferences.currency}
+          journalEntries={journalEntries}
+          transactions={transactions}
+        />
+      )}
 
       {/* Settings Modal */}
       {isSettingsOpen && currentUser && (

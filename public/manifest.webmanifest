@@ -1,0 +1,17 @@
+{
+  "name": "NIVORA — Personal Journal & Finance Intelligence",
+  "short_name": "NIVORA",
+  "description": "One private space for your thoughts, finances, and personal intelligence.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f1eb",
+  "theme_color": "#7b4a27",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
