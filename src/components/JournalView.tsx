@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { JournalEntry } from '../types';
-import { shareContent } from '../lib/firebase';
+import { shareContent, getCurrentIdToken } from '../lib/firebase';
 import {
   ArrowLeft,
   Plus,
@@ -15,7 +15,10 @@ import {
   Smile,
   ArrowUpDown,
   Sparkle,
-  Share2
+  Sparkles,
+  Share2,
+  Loader2,
+  Wand2
 } from 'lucide-react';
 
 interface JournalViewProps {
@@ -64,6 +67,52 @@ export const JournalView: React.FC<JournalViewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // AI Prompt-to-Journal State
+  const [quickAiPrompt, setQuickAiPrompt] = useState('');
+  const [modalAiPrompt, setModalAiPrompt] = useState('');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+
+  const handleGenerateAiJournal = async (promptText: string, openEditor = true) => {
+    if (!promptText.trim()) return;
+    try {
+      setIsAiGenerating(true);
+      setErrorMsg(null);
+      const idToken = await getCurrentIdToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+
+      const res = await fetch('/api/ai/generate-journal', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt: promptText.trim() })
+      });
+
+      if (!res.ok) {
+        throw new Error('AI generation request failed.');
+      }
+
+      const data = await res.json();
+
+      setEditingEntry(null);
+      setFormTitle(data.title || 'Personal Reflection');
+      setFormContent(data.content || promptText.trim());
+      setFormDate(new Date().toISOString().split('T')[0]);
+      setFormMood(data.mood || 'reflective');
+      setFormTags(Array.isArray(data.tags) ? data.tags.join(', ') : 'Reflection');
+      setQuickAiPrompt('');
+      setModalAiPrompt('');
+
+      if (openEditor) {
+        setIsEditorOpen(true);
+      }
+    } catch (err: any) {
+      console.error('AI Journal generation error:', err);
+      setErrorMsg('Failed to generate reflection with AI. Please try again.');
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
+
   const openNewEntry = () => {
     setEditingEntry(null);
     setFormTitle('');
@@ -71,6 +120,7 @@ export const JournalView: React.FC<JournalViewProps> = ({
     setFormDate(new Date().toISOString().split('T')[0]);
     setFormMood('reflective');
     setFormTags('');
+    setModalAiPrompt('');
     setErrorMsg(null);
     setIsEditorOpen(true);
   };
@@ -187,6 +237,64 @@ export const JournalView: React.FC<JournalViewProps> = ({
             <span>New Reflection</span>
           </button>
         </div>
+      </div>
+
+      {/* Quick AI Journal Bar - Instant Prompt to Reflection */}
+      <div className="bg-gradient-to-br from-[#f3e8dc]/90 via-[#fffdfb] to-[#ebd9c7]/70 border border-[#dfd3c7] rounded-[22px] p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-[8px] bg-[#7b4a27] text-white flex items-center justify-center shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5" />
+            </div>
+            <h4 className="text-xs sm:text-sm font-bold text-[#1f1b18]">
+              AI Prompt-to-Journal
+            </h4>
+            <span className="text-[10px] font-semibold bg-[#7b4a27] text-white px-2 py-0.2 rounded-full">
+              Instant
+            </span>
+          </div>
+          <span className="text-[11px] text-[#756b63] hidden sm:inline">
+            Zero-friction reflection powered by Gemini
+          </span>
+        </div>
+        <p className="text-xs text-[#756b63] mb-3 leading-relaxed">
+          Type a quick thought, highlight, or mood. NIVORA AI will craft a structured reflection, title, mood &amp; tags.
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleGenerateAiJournal(quickAiPrompt);
+          }}
+          className="flex flex-col sm:flex-row gap-2.5"
+        >
+          <input
+            id="journal-ai-quick-input"
+            type="text"
+            value={quickAiPrompt}
+            onChange={(e) => setQuickAiPrompt(e.target.value)}
+            placeholder="e.g. Morning run, fixed deployment issues, feeling energized &amp; productive..."
+            disabled={isAiGenerating}
+            className="flex-1 px-4 py-2.5 rounded-[14px] bg-white border border-[#dfd3c7] text-[#1f1b18] text-xs sm:text-sm placeholder-[#756b63]/60 focus:outline-hidden focus:border-[#7b4a27] focus:ring-2 focus:ring-[#7b4a27]/20 shadow-2xs"
+          />
+          <button
+            id="journal-ai-quick-btn"
+            type="submit"
+            disabled={isAiGenerating || !quickAiPrompt.trim()}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-[14px] bg-[#7b4a27] hover:bg-[#63391d] text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            {isAiGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Crafting Reflection...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Create with AI</span>
+              </>
+            )}
+          </button>
+        </form>
       </div>
 
       {/* Controls Bar: Search, Mood Filter, Sort */}
@@ -389,6 +497,55 @@ export const JournalView: React.FC<JournalViewProps> = ({
             {errorMsg && (
               <div className="mb-4 p-3 rounded-[14px] bg-[#fff5f5] border border-[#fecaca] text-[#991b1b] text-xs">
                 {errorMsg}
+              </div>
+            )}
+
+            {/* AI Generator Helper inside modal */}
+            {!editingEntry && (
+              <div className="mb-4 p-3.5 rounded-[16px] bg-gradient-to-r from-[#f3e8dc]/70 to-[#fffdfb] border border-[#e8ddd2] space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#7b4a27] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    AI Assist: Draft Reflection from Prompt
+                  </span>
+                  <span className="text-[10px] text-[#756b63] hidden sm:inline">Auto-fills Title, Content, Mood &amp; Tags</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    id="journal-modal-ai-input"
+                    type="text"
+                    value={modalAiPrompt}
+                    onChange={(e) => setModalAiPrompt(e.target.value)}
+                    placeholder="e.g. Great client pitch, relaxed evening walking the dog..."
+                    disabled={isAiGenerating}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleGenerateAiJournal(modalAiPrompt, false);
+                      }
+                    }}
+                    className="flex-1 px-3.5 py-2 rounded-[12px] bg-white border border-[#dfd3c7] text-[#1f1b18] text-xs placeholder-[#756b63]/60 focus:outline-hidden focus:border-[#7b4a27] focus:ring-2 focus:ring-[#7b4a27]/20 shadow-2xs"
+                  />
+                  <button
+                    id="journal-modal-ai-btn"
+                    type="button"
+                    onClick={() => handleGenerateAiJournal(modalAiPrompt, false)}
+                    disabled={isAiGenerating || !modalAiPrompt.trim()}
+                    className="px-3.5 py-2 rounded-[12px] bg-[#7b4a27] hover:bg-[#63391d] text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0 inline-flex items-center gap-1.5"
+                  >
+                    {isAiGenerating ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Drafting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-3.5 h-3.5" />
+                        <span>Draft</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
 
