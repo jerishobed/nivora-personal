@@ -1,7 +1,8 @@
 import { chromium } from 'playwright';
 
-// Target URL: Local dev or Live Cloud Run URL
+// Target URL: Live Cloud Run URL or Local dev
 const TARGET_URL = process.env.TARGET_URL || 'https://nivora-354978227611.asia-east1.run.app';
+const FIREBASE_PROJECT_ID = 'personal-gemini-journal-fcc28';
 
 // Rich, curated demo dataset showing realistic cross-domain behavioral patterns
 const DEMO_DATA = {
@@ -15,70 +16,70 @@ const DEMO_DATA = {
       daysAgo: 28,
       title: 'Setting Fresh Monthly Intentions',
       mood: 'inspired',
-      tags: 'Strategy, Goals, Productivity',
+      tags: ['Strategy', 'Goals', 'Productivity'],
       content: 'Starting this month with clear, intentional boundaries. Finalized our new product prototype and mapped out a disciplined savings target for upcoming travel. Feeling clear and aligned.'
     },
     {
       daysAgo: 24,
       title: 'Deep Work Sprint & Late Delivery',
       mood: 'stressed',
-      tags: 'Engineering, Deadlines, Work',
+      tags: ['Engineering', 'Deadlines', 'Work'],
       content: 'Pushed hard to resolve infrastructure bottlenecks before the launch deadline. Ordered late-night delivery dinner because I was too depleted to cook. Reminding myself that rest is productive.'
     },
     {
       daysAgo: 21,
       title: 'Morning Trail Run & Mental Clarity',
       mood: 'calm',
-      tags: 'Wellness, Fitness, Nature',
+      tags: ['Wellness', 'Fitness', 'Nature'],
       content: 'Woke up early for a 5k trail run before opening my laptop. The crisp morning air brought immense clarity. Zero urge to check social media or impulse browse.'
     },
     {
       daysAgo: 17,
       title: 'Client Consulting Milestone Delivered',
       mood: 'grateful',
-      tags: 'Freelance, Milestone, Career',
+      tags: ['Freelance', 'Milestone', 'Career'],
       content: 'Delivered the final milestone for our client consulting sprint. Grateful for smooth collaboration, positive feedback, and prompt invoice approval.'
     },
     {
       daysAgo: 14,
       title: 'Mid-Month Financial & Habits Review',
       mood: 'focused',
-      tags: 'Finance, Habits, Review',
+      tags: ['Finance', 'Habits', 'Review'],
       content: 'Reviewed spending across living and discretionary buckets. Noticed that dining expenses crept up during high-stress sprint days, but weekend mindfulness helped reset my budget trajectory.'
     },
     {
       daysAgo: 10,
       title: 'Weekend Book Club & Coffee Tasting',
       mood: 'reflective',
-      tags: 'Community, Learning, Mindfulness',
+      tags: ['Community', 'Learning', 'Mindfulness'],
       content: 'Spent a leisurely Saturday afternoon discussing behavioral psychology and value-based living with close friends over pour-over coffees. Great perspectives on intentional living.'
     },
     {
       daysAgo: 7,
       title: 'Building Cloud Architecture & Flow State',
       mood: 'focused',
-      tags: 'Engineering, Flow, Milestone',
+      tags: ['Engineering', 'Flow', 'Milestone'],
       content: 'Submerged in uninterrupted flow state optimizing our cloud backend services. Everything deployed cleanly with sub-second latency and zero errors.'
     },
     {
       daysAgo: 4,
       title: 'Restorative Evening & Weekly Meal Prep',
       mood: 'calm',
-      tags: 'Wellness, Home, Mindfulness',
+      tags: ['Wellness', 'Home', 'Mindfulness'],
       content: 'Took time to cook fresh wholesome meals for the week. Cooking is therapeutic and saves significantly on weekday takeout.'
     },
     {
       daysAgo: 2,
       title: 'Celebrating Product Launch',
       mood: 'inspired',
-      tags: 'Celebration, Milestone, Team',
+      tags: ['Celebration', 'Milestone', 'Team'],
       content: 'Our product release is officially live! Celebrated this huge milestone with dinner with the team. Proud of our persistence and craftsmanship.'
     },
     {
       daysAgo: 0,
       title: 'Clarity, Balance & Next Horizon',
       mood: 'grateful',
-      tags: 'Gratitude, Clarity, Vision',
+      tags: ['Gratitude', 'Clarity', 'Vision'],
       content: 'Reflecting on the harmony built between mindful daily thoughts and conscious financial progress. Entering the new week with grounded calm and clear focus.'
     }
   ],
@@ -123,6 +124,12 @@ const DEMO_DATA = {
   ]
 };
 
+function getPastDate(daysAgo: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().split('T')[0];
+}
+
 async function run() {
   console.log(`\n======================================================`);
   console.log(`🚀 NIVORA Playwright Demo Data Loader`);
@@ -130,7 +137,7 @@ async function run() {
   console.log(`======================================================\n`);
 
   const browser = await chromium.launch({
-    headless: false, // Headed so user can see and interactively log in
+    headless: false,
     slowMo: 50
   });
 
@@ -147,194 +154,160 @@ async function run() {
   console.log(`Waiting for user authentication...`);
   console.log(`👉 Please sign in to your account in the browser window if not already signed in.`);
 
-  // Wait until we are on the main dashboard (UserCard or Dashboard visible)
+  // Wait until we are on the main dashboard
   try {
     await page.waitForSelector('#nivora-dashboard, #nivora-brand-compact, #header-settings-btn', {
-      timeout: 180000 // 3 minutes timeout to give user time to sign in
+      timeout: 180000 // 3 minutes
     });
     console.log(`\n✅ Authenticated successfully!`);
   } catch (err) {
-    console.error(`❌ Authentication timeout. Please make sure you sign in.`);
+    console.error(`❌ Authentication timeout.`);
     await browser.close();
     return;
   }
 
-  // Brief delay for Firebase state stabilization
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(1000);
 
-  console.log(`\n📦 Injecting Demo Data into your account...`);
-
-  // Direct injection into user's authenticated Firestore session via page evaluation
-  const result = await page.evaluate(async (data) => {
-    try {
-      // Access Firebase db and auth from window or module context
-      const getPastDate = (daysAgo: number) => {
-        const d = new Date();
-        d.setDate(d.getDate() - daysAgo);
-        return d.toISOString().split('T')[0];
-      };
-
-      // Find user UID from Firebase Auth in localStorage or indexedDB
-      let authUser: any = null;
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('firebase:authUser:')) {
-          try {
-            authUser = JSON.parse(localStorage.getItem(k) || '{}');
-            break;
-          } catch (e) {}
-        }
-      }
-
-      if (!authUser?.uid) {
-        return { success: false, error: 'Could not find authenticated UID in session.' };
-      }
-
-      const uid = authUser.uid;
-
-      // Use Firestore REST API with user's ID token for direct, lightning-fast batch seeding
-      const idToken = authUser.stsTokenManager?.accessToken;
-      if (!idToken) {
-        return { success: false, error: 'Could not retrieve ID token.' };
-      }
-
-      const projectId = 'personal-gemini-journal-fcc28';
-      const firestoreBase = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}`;
-
-      // 1. Update Preferences
-      await fetch(`${firestoreBase}/settings/preferences`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          fields: {
-            displayName: { stringValue: data.preferences.displayName },
-            bio: { stringValue: data.preferences.bio },
-            currency: { stringValue: data.preferences.currency },
-            updatedAt: { stringValue: new Date().toISOString() }
+  // Retrieve Firebase Auth UID and Access Token from browser localStorage
+  const authInfo: any = await page.evaluate(`(() => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('firebase:authUser:')) {
+        try {
+          const authUser = JSON.parse(localStorage.getItem(k) || '{}');
+          if (authUser?.uid) {
+            return {
+              uid: authUser.uid,
+              idToken: authUser.stsTokenManager?.accessToken
+            };
           }
-        })
-      });
-
-      // 2. Add Journals
-      let journalCount = 0;
-      for (const j of data.journals) {
-        const dateStr = getPastDate(j.daysAgo);
-        const docId = `demo-j-${Date.now()}-${journalCount}`;
-        const tagsList = j.tags.split(',').map((t: string) => ({ stringValue: t.trim() }));
-
-        await fetch(`${firestoreBase}/journal/${docId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            fields: {
-              title: { stringValue: j.title },
-              content: { stringValue: j.content },
-              date: { stringValue: dateStr },
-              mood: { stringValue: j.mood },
-              tags: { arrayValue: { values: tagsList } },
-              createdAt: { stringValue: `${dateStr}T10:00:00.000Z` },
-              updatedAt: { stringValue: `${dateStr}T10:00:00.000Z` }
-            }
-          })
-        });
-        journalCount++;
+        } catch (e) {}
       }
-
-      // 3. Add Transactions
-      let transCount = 0;
-      for (const t of data.transactions) {
-        const dateStr = getPastDate(t.daysAgo);
-        const docId = `demo-t-${Date.now()}-${transCount}`;
-
-        await fetch(`${firestoreBase}/transactions/${docId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            fields: {
-              amount: { doubleValue: t.amount },
-              type: { stringValue: t.type },
-              category: { stringValue: t.category },
-              description: { stringValue: t.description },
-              date: { stringValue: dateStr },
-              createdAt: { stringValue: `${dateStr}T12:00:00.000Z` }
-            }
-          })
-        });
-        transCount++;
-      }
-
-      // 4. Add Goals
-      let goalCount = 0;
-      for (const g of data.goals) {
-        const docId = `demo-g-${Date.now()}-${goalCount}`;
-
-        await fetch(`${firestoreBase}/goals/${docId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            fields: {
-              title: { stringValue: g.title },
-              targetAmount: { doubleValue: g.targetAmount },
-              currentAmount: { doubleValue: g.currentAmount },
-              category: { stringValue: g.category },
-              targetDate: { stringValue: g.targetDate },
-              createdAt: { stringValue: new Date().toISOString() },
-              updatedAt: { stringValue: new Date().toISOString() }
-            }
-          })
-        });
-        goalCount++;
-      }
-
-      return {
-        success: true,
-        journalsAdded: journalCount,
-        transactionsAdded: transCount,
-        goalsAdded: goalCount
-      };
-    } catch (e: any) {
-      return { success: false, error: e?.message || String(e) };
     }
-  }, DEMO_DATA);
+    return null;
+  })()`);
 
-  if (result.success) {
-    console.log(`\n🎉 Success! Added:`);
-    console.log(`   • ${result.journalsAdded} Journal Reflections across 4 weeks`);
-    console.log(`   • ${result.transactionsAdded} Financial Transactions`);
-    console.log(`   • ${result.goalsAdded} Milestone Goals`);
-    console.log(`   • Updated Profile & Preferences to "Alex Morgan"`);
-
-    // Reload page to reflect fresh Firestore realtime data
-    await page.reload();
-    await page.waitForTimeout(3000);
-    console.log(`\n✨ Dashboard reloaded with live demo data.`);
-    console.log(`\nPress Ctrl+C in terminal when you are done exploring.`);
-  } else {
-    console.warn(`⚠️ Direct API injection notice:`, result.error);
-    console.log(`Falling back to UI-driven button loader...`);
-    // Click "Load Sample Data" button if visible
-    const seedBtn = await page.$('#dashboard-seed-sample-btn');
-    if (seedBtn) {
-      await seedBtn.click();
-      console.log(`Clicked sample data button.`);
-      await page.waitForTimeout(3000);
-    }
+  if (!authInfo?.uid || !authInfo?.idToken) {
+    console.error(`❌ Could not retrieve user ID token from session.`);
+    return;
   }
 
-  // Keep browser open for user inspection
-  await page.waitForTimeout(60000);
+  const { uid, idToken } = authInfo;
+  console.log(`User UID: ${uid}`);
+  console.log(`\n📦 Seeding Demo Data directly to Firestore...`);
+
+  const firestoreBase = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${uid}`;
+  const headers = {
+    'Authorization': `Bearer ${idToken}`,
+    'Content-Type': 'application/json'
+  };
+
+  // 1. Update Profile Preferences
+  try {
+    console.log(`Setting Profile: "${DEMO_DATA.preferences.displayName}"...`);
+    await fetch(`${firestoreBase}/settings/preferences`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        fields: {
+          displayName: { stringValue: DEMO_DATA.preferences.displayName },
+          bio: { stringValue: DEMO_DATA.preferences.bio },
+          currency: { stringValue: DEMO_DATA.preferences.currency },
+          updatedAt: { stringValue: new Date().toISOString() }
+        }
+      })
+    });
+  } catch (e) {
+    console.warn('Preferences warning:', e);
+  }
+
+  // 2. Add Journals
+  console.log(`Writing 10 Journal reflections...`);
+  let jIdx = 0;
+  for (const j of DEMO_DATA.journals) {
+    const dateStr = getPastDate(j.daysAgo);
+    const docId = `demo-j-${Date.now()}-${jIdx++}`;
+    const tagsList = j.tags.map((t) => ({ stringValue: t }));
+
+    await fetch(`${firestoreBase}/journal/${docId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        fields: {
+          title: { stringValue: j.title },
+          content: { stringValue: j.content },
+          date: { stringValue: dateStr },
+          mood: { stringValue: j.mood },
+          tags: { arrayValue: { values: tagsList } },
+          createdAt: { stringValue: `${dateStr}T10:00:00.000Z` },
+          updatedAt: { stringValue: `${dateStr}T10:00:00.000Z` }
+        }
+      })
+    });
+  }
+
+  // 3. Add Financial Transactions
+  console.log(`Writing 14 Financial transactions...`);
+  let tIdx = 0;
+  for (const t of DEMO_DATA.transactions) {
+    const dateStr = getPastDate(t.daysAgo);
+    const docId = `demo-t-${Date.now()}-${tIdx++}`;
+
+    await fetch(`${firestoreBase}/transactions/${docId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        fields: {
+          amount: { doubleValue: t.amount },
+          type: { stringValue: t.type },
+          category: { stringValue: t.category },
+          description: { stringValue: t.description },
+          date: { stringValue: dateStr },
+          createdAt: { stringValue: `${dateStr}T12:00:00.000Z` }
+        }
+      })
+    });
+  }
+
+  // 4. Add Milestone Goals
+  console.log(`Writing 3 Milestone goals...`);
+  let gIdx = 0;
+  for (const g of DEMO_DATA.goals) {
+    const docId = `demo-g-${Date.now()}-${gIdx++}`;
+
+    await fetch(`${firestoreBase}/goals/${docId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        fields: {
+          title: { stringValue: g.title },
+          targetAmount: { doubleValue: g.targetAmount },
+          currentAmount: { doubleValue: g.currentAmount },
+          category: { stringValue: g.category },
+          targetDate: { stringValue: g.targetDate },
+          createdAt: { stringValue: new Date().toISOString() },
+          updatedAt: { stringValue: new Date().toISOString() }
+        }
+      })
+    });
+  }
+
+  console.log(`\n🎉 Success! All Demo Data has been written to your account:`);
+  console.log(`   • 10 Journal Reflections spanning 4 weeks`);
+  console.log(`   • 14 Financial Transactions across Income & Expenses`);
+  console.log(`   • 3 Milestone Vision Goals`);
+  console.log(`   • Profile updated to "Alex Morgan"`);
+
+  // Reload the browser page to display fresh realtime data
+  console.log(`\n🔄 Refreshing dashboard...`);
+  await page.reload();
+  await page.waitForTimeout(3000);
+
+  console.log(`\n✨ Done! You can now explore your live account in the browser.`);
+  console.log(`Press Ctrl+C when you are done.`);
+
+  // Keep browser open for inspection
+  await page.waitForTimeout(180000);
   await browser.close();
 }
 

@@ -490,6 +490,7 @@ export default function App() {
           journalCount={journalEntries.length}
           transactionCount={transactions.length}
           onExportData={handleExportData}
+          onSeedData={handleSeedData}
         />
       )}
 

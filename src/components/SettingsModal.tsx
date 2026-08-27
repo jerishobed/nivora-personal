@@ -27,6 +27,7 @@ interface SettingsModalProps {
   journalCount: number;
   transactionCount: number;
   onExportData?: () => void;
+  onSeedData?: () => Promise<void> | void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -37,7 +38,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSignOut,
   journalCount,
   transactionCount,
-  onExportData
+  onExportData,
+  onSeedData
 }) => {
   const [displayName, setDisplayName] = useState(user.displayName || '');
   const [bio, setBio] = useState(user.bio || preferences.bio || '');
@@ -263,10 +265,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-[14px] bg-white border border-[#dfd3c7] text-[#1f1b18] hover:bg-[#f5f1eb] text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <Download className="w-4 h-4 text-[#7b4a27]" />
-                  <span>Export Data ({journalCount + transactionCount} records)</span>
+                  <span>Export Data ({journalCount + transactionCount})</span>
                 </button>
               )}
             </div>
+
+            {/* One-click Demo Storyline Seeder */}
+            {onSeedData && (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await onSeedData();
+                    onClose();
+                  }}
+                  className="w-full py-2.5 px-4 rounded-[14px] bg-[#f3e8dc] hover:bg-[#ebd9c7] text-[#7b4a27] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Load Demo Presentation Storyline (10 Journals, 14 Transactions, 3 Goals)</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Section 5: Discreet Sign Out */}

@@ -323,41 +323,121 @@ export const seedSampleData = async (uid: string): Promise<void> => {
     return d.toISOString().split('T')[0];
   };
 
-  // Sample Journals
+  // Full Rich Demo Storyline (10 Journals spanning 4 weeks)
   const sampleJournals = [
     {
-      title: 'Quarterly Reflections & Clarity',
-      content: 'Taking time this morning with a cup of black coffee to review the past few weeks. I have felt steady progress on my creative initiatives, though balance between work and rest needs more mindful boundaries. Looking forward to simplifying my daily workflow and prioritizing daily walks.',
-      date: getPastDateStr(1),
+      title: 'Setting Fresh Monthly Intentions',
+      content: 'Starting this month with clear, intentional boundaries. Finalized our new product prototype and mapped out a disciplined savings target for upcoming travel. Feeling clear and aligned.',
+      date: getPastDateStr(28),
+      mood: 'inspired' as const,
+      tags: ['Strategy', 'Goals', 'Productivity']
+    },
+    {
+      title: 'Deep Work Sprint & Late Delivery',
+      content: 'Pushed hard to resolve infrastructure bottlenecks before the launch deadline. Ordered late-night delivery dinner because I was too depleted to cook. Reminding myself that rest is productive.',
+      date: getPastDateStr(24),
+      mood: 'stressed' as const,
+      tags: ['Engineering', 'Deadlines', 'Work']
+    },
+    {
+      title: 'Morning Trail Run & Mental Clarity',
+      content: 'Woke up early for a 5k trail run before opening my laptop. The crisp morning air brought immense clarity. Zero urge to check social media or impulse browse.',
+      date: getPastDateStr(21),
       mood: 'calm' as const,
-      tags: ['Reflections', 'Focus', 'Mindfulness']
+      tags: ['Wellness', 'Fitness', 'Nature']
     },
     {
-      title: 'Deep Work & Strategy Session',
-      content: 'Spent 4 focused hours building out the core product architecture. Made great breakthroughs in state management and data modeling. The key realization today: simplicity beats clever complexity every time.',
-      date: getPastDateStr(3),
-      mood: 'focused' as const,
-      tags: ['Work', 'Ideas', 'Architecture']
-    },
-    {
-      title: 'Weekend Reset & Gratitude',
-      content: 'A quiet afternoon reading and visiting the local botanical gardens with family. Grateful for good health, quiet moments, and the space to think clearly without constant notifications.',
-      date: getPastDateStr(6),
+      title: 'Client Consulting Milestone Delivered',
+      content: 'Delivered the final milestone for our client consulting sprint. Grateful for smooth collaboration, positive feedback, and prompt invoice approval.',
+      date: getPastDateStr(17),
       mood: 'grateful' as const,
-      tags: ['Gratitude', 'Personal', 'Health']
+      tags: ['Freelance', 'Milestone', 'Career']
+    },
+    {
+      title: 'Mid-Month Financial & Habits Review',
+      content: 'Reviewed spending across living and discretionary buckets. Noticed that dining expenses crept up during high-stress sprint days, but weekend mindfulness helped reset my budget trajectory.',
+      date: getPastDateStr(14),
+      mood: 'focused' as const,
+      tags: ['Finance', 'Habits', 'Review']
+    },
+    {
+      title: 'Weekend Book Club & Coffee Tasting',
+      content: 'Spent a leisurely Saturday afternoon discussing behavioral psychology and value-based living with close friends over pour-over coffees. Great perspectives on intentional living.',
+      date: getPastDateStr(10),
+      mood: 'reflective' as const,
+      tags: ['Community', 'Learning', 'Mindfulness']
+    },
+    {
+      title: 'Building Cloud Architecture & Flow State',
+      content: 'Submerged in uninterrupted flow state optimizing our cloud backend services. Everything deployed cleanly with sub-second latency and zero errors.',
+      date: getPastDateStr(7),
+      mood: 'focused' as const,
+      tags: ['Engineering', 'Flow', 'Milestone']
+    },
+    {
+      title: 'Restorative Evening & Weekly Meal Prep',
+      content: 'Took time to cook fresh wholesome meals for the week. Cooking is therapeutic and saves significantly on weekday takeout.',
+      date: getPastDateStr(4),
+      mood: 'calm' as const,
+      tags: ['Wellness', 'Home', 'Mindfulness']
+    },
+    {
+      title: 'Celebrating Product Launch',
+      content: 'Our product release is officially live! Celebrated this huge milestone with dinner with the team. Proud of our persistence and craftsmanship.',
+      date: getPastDateStr(2),
+      mood: 'inspired' as const,
+      tags: ['Celebration', 'Milestone', 'Team']
+    },
+    {
+      title: 'Clarity, Balance & Next Horizon',
+      content: 'Reflecting on the harmony built between mindful daily thoughts and conscious financial progress. Entering the new week with grounded calm and clear focus.',
+      date: getPastDateStr(0),
+      mood: 'grateful' as const,
+      tags: ['Gratitude', 'Clarity', 'Vision']
     }
   ];
 
-  // Sample Transactions
+  // Full Rich Financial Ledger (14 Transactions)
   const sampleTransactions = [
-    { amount: 5200, type: 'income' as const, category: 'Salary', description: 'Monthly Direct Deposit', date: getPastDateStr(2) },
-    { amount: 850, type: 'income' as const, category: 'Freelance', description: 'Design Consultation Retainer', date: getPastDateStr(8) },
-    { amount: 1650, type: 'expense' as const, category: 'Housing', description: 'Monthly Apartment Rent', date: getPastDateStr(3) },
-    { amount: 142.50, type: 'expense' as const, category: 'Food', description: 'Organic Market & Groceries', date: getPastDateStr(1) },
-    { amount: 68.00, type: 'expense' as const, category: 'Bills', description: 'High-Speed Fiber Internet', date: getPastDateStr(5) },
-    { amount: 45.00, type: 'expense' as const, category: 'Transport', description: 'Metro Transit Card Pass', date: getPastDateStr(7) },
-    { amount: 120.00, type: 'expense' as const, category: 'Health', description: 'Wellness Center & Fitness Membership', date: getPastDateStr(9) },
-    { amount: 38.50, type: 'expense' as const, category: 'Food', description: 'Artisan Coffee & Books', date: getPastDateStr(4) }
+    { amount: 4500.0, type: 'income' as const, category: 'Salary', description: 'Monthly Creative Director Salary', date: getPastDateStr(26) },
+    { amount: 1400.0, type: 'expense' as const, category: 'Housing', description: 'Monthly Apartment Rent', date: getPastDateStr(25) },
+    { amount: 48.5, type: 'expense' as const, category: 'Food', description: 'Late-night Sprint Delivery Dinner', date: getPastDateStr(24) },
+    { amount: 120.0, type: 'expense' as const, category: 'Bills', description: 'High-Speed Fiber Internet & Utilities', date: getPastDateStr(23) },
+    { amount: 145.5, type: 'expense' as const, category: 'Food', description: 'Whole Foods Organic Groceries', date: getPastDateStr(20) },
+    { amount: 85.0, type: 'expense' as const, category: 'Health', description: 'Monthly Gym & Climbing Membership', date: getPastDateStr(18) },
+    { amount: 1250.0, type: 'income' as const, category: 'Freelance', description: 'Client UI Consulting Milestone 2', date: getPastDateStr(16) },
+    { amount: 18.0, type: 'expense' as const, category: 'Food', description: 'Specialty Pour-over Coffee & Pastry', date: getPastDateStr(15) },
+    { amount: 35.0, type: 'expense' as const, category: 'Education', description: 'Design & AI Masterclass Subscription', date: getPastDateStr(14) },
+    { amount: 130.0, type: 'expense' as const, category: 'Food', description: 'Weekly Farmers Market & Pantry Restock', date: getPastDateStr(12) },
+    { amount: 24.0, type: 'expense' as const, category: 'Transport', description: 'Metro & Transit Card Reload', date: getPastDateStr(9) },
+    { amount: 45.0, type: 'expense' as const, category: 'Shopping', description: 'Ergonomic Desk Accessories', date: getPastDateStr(5) },
+    { amount: 95.0, type: 'expense' as const, category: 'Food', description: 'Fresh Produce & Meal Prep Groceries', date: getPastDateStr(3) },
+    { amount: 72.0, type: 'expense' as const, category: 'Entertainment', description: 'Team Milestone Celebration Dinner', date: getPastDateStr(2) }
+  ];
+
+  // 3 Smart Milestone Goals
+  const sampleGoals = [
+    {
+      title: 'Emergency Peace-of-Mind Fund',
+      targetAmount: 5000,
+      currentAmount: 4200,
+      category: 'savings' as const,
+      targetDate: '2026-12-31'
+    },
+    {
+      title: 'Kyoto & Tokyo Autumn Trip',
+      targetAmount: 2800,
+      currentAmount: 1750,
+      category: 'travel' as const,
+      targetDate: '2026-10-15'
+    },
+    {
+      title: 'Mindfulness Wellness Retreat',
+      targetAmount: 800,
+      currentAmount: 800,
+      category: 'wellness' as const,
+      targetDate: '2026-09-01'
+    }
   ];
 
   for (const j of sampleJournals) {
@@ -365,6 +445,9 @@ export const seedSampleData = async (uid: string): Promise<void> => {
   }
   for (const t of sampleTransactions) {
     await saveTransaction(uid, t);
+  }
+  for (const g of sampleGoals) {
+    await saveGoal(uid, g);
   }
 };
 
