@@ -415,40 +415,95 @@ export const seedSampleData = async (uid: string): Promise<void> => {
     { amount: 72.0, type: 'expense' as const, category: 'Entertainment', description: 'Team Milestone Celebration Dinner', date: getPastDateStr(2) }
   ];
 
-  // 3 Smart Milestone Goals
+  // 4 Smart Milestone Goals
   const sampleGoals = [
     {
-      title: 'Emergency Peace-of-Mind Fund',
+      title: 'Emergency Peace-of-Mind Fund (6 Months)',
       targetAmount: 5000,
       currentAmount: 4200,
       category: 'savings' as const,
       targetDate: '2026-12-31'
     },
     {
-      title: 'Kyoto & Tokyo Autumn Trip',
+      title: 'Kyoto & Tokyo Autumn Mindful Trip',
       targetAmount: 2800,
       currentAmount: 1750,
       category: 'travel' as const,
       targetDate: '2026-10-15'
     },
     {
-      title: 'Mindfulness Wellness Retreat',
+      title: 'Mindfulness & Silent Wellness Retreat',
       targetAmount: 800,
       currentAmount: 800,
       category: 'wellness' as const,
       targetDate: '2026-09-01'
+    },
+    {
+      title: 'AI Product Design Certification',
+      targetAmount: 1200,
+      currentAmount: 900,
+      category: 'education' as const,
+      targetDate: '2026-11-30'
     }
   ];
 
+  // Save Preferences
+  try {
+    await saveUserPreferences(uid, {
+      displayName: 'Alex Morgan',
+      bio: 'Product Designer & Tech Creator exploring mindful living, intentional finance, and personal growth.',
+      currency: 'USD'
+    });
+  } catch (e) {}
+
+  // Save Journals
   for (const j of sampleJournals) {
     await saveJournalEntry(uid, j);
   }
+
+  // Save Transactions
   for (const t of sampleTransactions) {
     await saveTransaction(uid, t);
   }
+
+  // Save Goals
   for (const g of sampleGoals) {
     await saveGoal(uid, g);
   }
+
+  // Save Sample AI Conversation
+  try {
+    await saveConversation(uid, {
+      id: 'demo-analysis-thread',
+      title: 'Mind & Money Behavioral Analysis',
+      messages: [
+        {
+          id: 'msg-1',
+          sender: 'user',
+          text: 'Can you analyze how my reflections relate to my dining and grocery spending over the past month?',
+          timestamp: Date.now() - 3600000
+        },
+        {
+          id: 'msg-2',
+          sender: 'assistant',
+          text: `Looking across your past 4 weeks of entries, here are the key behavioral patterns in your data:
+
+### 1. The Work-Stress Delivery Correlation
+• **Observation**: During deep work sprint deadlines (e.g., when logged as **Stressed** 24 days ago), takeout delivery spending increased ($48.50) due to decision fatigue and depletion.
+• **Takeaway**: Meal prepping on calm Sundays reduced takeout needs by **65%** during the week.
+
+### 2. High-Clarity Days Boost Savings
+• **Observation**: On days following morning trail runs and restorative weekends (logged as **Calm** and **Grateful**), impulsive online shopping was zero.
+• **Financial Impact**: Net savings reached **$3,000+** this month across salary and freelance consulting.
+
+### 3. Milestone Progress
+• **Emergency Peace-of-Mind Fund**: **84% funded** ($4,200 / $5,000).
+• **Wellness Retreat**: **100% Achieved! 🎉**`,
+          timestamp: Date.now() - 3550000
+        }
+      ]
+    });
+  } catch (e) {}
 };
 
 // Conversations Firestore API (User-scoped: users/{uid}/conversations/{conversationId})
