@@ -453,9 +453,11 @@ Please directly answer the current user question or follow-up in the context of 
 
     // Call Gemini with current official models (Fast / Lite / Flash)
     const candidateModels = [
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
       'gemini-3.1-flash-lite',
       'gemini-3.7-flash',
-      'gemini-flash-latest'
+      'gemini-flash-lite-latest'
     ];
 
     let response: any = null;
@@ -548,9 +550,11 @@ Output strictly valid JSON matching this schema:
 }`;
 
     const candidateModels = [
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
       'gemini-3.1-flash-lite',
       'gemini-3.7-flash',
-      'gemini-flash-latest'
+      'gemini-flash-lite-latest'
     ];
 
     let response: any = null;
