@@ -161,7 +161,7 @@ export async function requireFirebaseAuth(
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Security Hardening: Disable X-Powered-By header to prevent fingerprinting
 app.disable('x-powered-by');
