@@ -457,46 +457,46 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
   }, [messages]);
 
   return (
-    <div id="nivora-ai-insights-view" className="space-y-4">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/90 border border-[#e8ddd2] p-4 rounded-[20px] shadow-xs">
+    <div id="nivora-ai-insights-view" className="space-y-2.5 sm:space-y-4 flex flex-col flex-1">
+      {/* Header Bar - compact single row on mobile */}
+      <div className="flex items-center justify-between gap-2 bg-white/90 border border-[#e8ddd2] px-3 py-2.5 sm:p-4 rounded-[18px] sm:rounded-[20px] shadow-xs">
         {/* Left: Back & Title */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             id="ai-back-btn"
             onClick={onBack}
-            className="p-2 rounded-[12px] bg-[#fffdfb] border border-[#e8ddd2] text-[#756b63] hover:text-[#1f1b18] hover:bg-[#f5f1eb] transition-colors cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-[10px] sm:rounded-[12px] bg-[#fffdfb] border border-[#e8ddd2] text-[#756b63] hover:text-[#1f1b18] hover:bg-[#f5f1eb] transition-colors cursor-pointer shrink-0"
             aria-label="Back to Dashboard"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-[#1f1b18] tracking-tight">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-base sm:text-xl font-bold text-[#1f1b18] tracking-tight truncate">
                 NIVORA AI
               </h2>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-[#f3e8dc] text-[#7b4a27] px-2.5 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold bg-[#f3e8dc] text-[#7b4a27] px-2 py-0.2 sm:px-2.5 sm:py-0.5 rounded-full shrink-0">
                 <Sparkles className="w-3 h-3" />
-                Intelligence
+                <span className="hidden xs:inline">Intelligence</span>
               </span>
             </div>
-            <p className="text-xs text-[#756b63] truncate max-w-xs sm:max-w-md">
+            <p className="text-[11px] sm:text-xs text-[#756b63] truncate">
               {messages.length > 0 ? activeConvTitle : 'Your private intelligence layer'}
             </p>
           </div>
         </div>
 
-        {/* Right: History, New Chat, & Context badges */}
-        <div className="flex items-center gap-2 self-end sm:self-center">
+        {/* Right: History, New Chat */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Conversation History Modal Trigger */}
           <button
             id="ai-history-btn"
             onClick={() => setShowHistoryModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] text-xs font-semibold text-[#1f1b18] bg-[#fffdfb] hover:bg-[#f5f1eb] border border-[#e8ddd2] transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[10px] sm:rounded-[12px] text-xs font-semibold text-[#1f1b18] bg-[#fffdfb] hover:bg-[#f5f1eb] border border-[#e8ddd2] transition-colors cursor-pointer"
             title="View recent conversations"
           >
             <History className="w-3.5 h-3.5 text-[#7b4a27]" />
-            <span>Conversations</span>
+            <span className="hidden sm:inline">Conversations</span>
             {conversations.length > 0 && (
               <span className="text-[10px] bg-[#f3e8dc] text-[#7b4a27] px-1.5 py-0.2 rounded-full font-bold">
                 {conversations.length}
@@ -508,7 +508,7 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
           <button
             id="ai-new-conversation-btn"
             onClick={handleStartNewConversation}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] text-xs font-semibold text-white bg-[#7b4a27] hover:bg-[#63391d] transition-all cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[10px] sm:rounded-[12px] text-xs font-semibold text-white bg-[#7b4a27] hover:bg-[#63391d] transition-all cursor-pointer shadow-2xs"
             title="Start new conversation"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -519,9 +519,9 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
       </div>
 
       {/* Main Chat Container */}
-      <div className="bg-white/90 border border-[#e8ddd2] rounded-[24px] shadow-xs flex flex-col h-[calc(100vh-250px)] min-h-[480px] md:h-[650px] md:max-h-[78vh] overflow-hidden relative">
+      <div className="bg-white/90 border border-[#e8ddd2] rounded-[20px] sm:rounded-[24px] shadow-xs flex flex-col h-[calc(100dvh-200px)] sm:h-[calc(100dvh-220px)] md:h-[680px] overflow-hidden relative">
         {/* Messages Scroll Area */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6">
           {messages.length === 0 ? (
             /* Empty State */
             <div className="h-full flex flex-col items-center justify-center text-center max-w-xl mx-auto py-8">
@@ -781,14 +781,14 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
 
         {/* Dynamic Suggested Follow-ups Chips */}
         {messages.length > 0 && (
-          <div className="px-4 py-2 border-t border-[#f5f1eb] bg-[#fffdfb]/80 overflow-x-auto flex items-center gap-2 shrink-0">
-            <span className="text-[11px] font-semibold text-[#756b63] shrink-0">Suggested:</span>
+          <div className="px-3 py-1.5 sm:px-4 sm:py-2 border-t border-[#f5f1eb] bg-[#fffdfb]/90 overflow-x-auto flex items-center gap-1.5 sm:gap-2 shrink-0 scrollbar-none">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-[#756b63] shrink-0">Suggested:</span>
             {activeSuggestedFollowUps.map((prompt, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSendPrompt(prompt)}
                 disabled={isLoading}
-                className="text-[11px] font-medium bg-white border border-[#dfd3c7] hover:border-[#7b4a27] text-[#1f1b18] px-3 py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer disabled:opacity-50 shadow-2xs hover:bg-[#f3e8dc]/40"
+                className="text-[10px] sm:text-[11px] font-medium bg-white border border-[#dfd3c7] hover:border-[#7b4a27] text-[#1f1b18] px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer disabled:opacity-50 shadow-2xs hover:bg-[#f3e8dc]/40 shrink-0"
               >
                 {prompt}
               </button>
@@ -797,43 +797,47 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
         )}
 
         {/* Sticky Chat Composer / Input Bar */}
-        <div className="p-3.5 sm:p-4 bg-white border-t border-[#e8ddd2] shrink-0">
+        <div className="p-2.5 sm:p-4 bg-white border-t border-[#e8ddd2] shrink-0">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendPrompt(inputQuery);
             }}
-            className="flex items-end gap-2.5"
+            className="flex items-end gap-2 sm:gap-2.5"
           >
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}
-                rows={2}
-                placeholder="Ask NIVORA AI about your journal, spending, patterns, or habits..."
+                rows={1}
+                placeholder="Ask NIVORA AI about journal, spending..."
                 value={inputQuery}
-                onChange={(e) => setInputQuery(e.target.value)}
+                onChange={(e) => {
+                  setInputQuery(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
+                }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="w-full px-4 py-3 rounded-[16px] bg-[#fffdfb] border border-[#dfd3c7] text-[#1f1b18] placeholder-[#756b63]/60 text-xs sm:text-sm focus:outline-hidden focus:border-[#7b4a27] focus:ring-2 focus:ring-[#7b4a27]/20 transition-all resize-none disabled:opacity-60 leading-relaxed"
+                className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-[14px] sm:rounded-[16px] bg-[#fffdfb] border border-[#dfd3c7] text-[#1f1b18] placeholder-[#756b63]/60 text-xs sm:text-sm focus:outline-hidden focus:border-[#7b4a27] focus:ring-2 focus:ring-[#7b4a27]/20 transition-all resize-none disabled:opacity-60 leading-snug max-h-[100px]"
               />
             </div>
             <button
               id="ai-send-btn"
               type="submit"
               disabled={isLoading || !inputQuery.trim()}
-              className="p-3.5 rounded-[16px] bg-[#7b4a27] hover:bg-[#63391d] text-white transition-all shadow-xs disabled:opacity-40 cursor-pointer shrink-0"
+              className="p-2.5 sm:p-3.5 rounded-[14px] sm:rounded-[16px] bg-[#7b4a27] hover:bg-[#63391d] text-white transition-all shadow-xs disabled:opacity-40 cursor-pointer shrink-0"
               aria-label="Send message"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
               ) : (
-                <Send className="w-5 h-5" />
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </button>
           </form>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-[#756b63]">
+          <div className="mt-1 sm:mt-2 hidden sm:flex items-center justify-between text-[11px] text-[#756b63]">
             <span>Press Enter to send &bull; Shift + Enter for new line</span>
-            <span className="hidden sm:inline">User-Scoped &bull; Private &amp; Isolated</span>
+            <span>User-Scoped &bull; Private &amp; Isolated</span>
           </div>
         </div>
       </div>

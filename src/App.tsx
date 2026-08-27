@@ -323,7 +323,7 @@ export default function App() {
           </nav>
 
           {/* Top Quick Actions */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <button
               id="header-settings-btn"
               onClick={() => setIsSettingsOpen(true)}
@@ -333,20 +333,26 @@ export default function App() {
             >
               <Settings className="w-4 h-4 text-[#7b4a27]" />
             </button>
-            <button
-              id="header-ask-ai-btn"
-              onClick={() => setActiveTab('ai')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[14px] bg-[#f3e8dc] hover:bg-[#ebd9c7] text-[#7b4a27] text-xs font-semibold transition-colors cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Ask AI</span>
-            </button>
+            {activeTab !== 'ai' && (
+              <button
+                id="header-ask-ai-btn"
+                onClick={() => setActiveTab('ai')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[14px] bg-[#f3e8dc] hover:bg-[#ebd9c7] text-[#7b4a27] text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Ask AI</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Main Content Area - with bottom padding on mobile to account for fixed bottom navigation */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 pb-28 md:pb-8">
+      {/* Main Content Area - with responsive bottom padding for mobile navigation */}
+      <main className={`flex-1 max-w-6xl w-full mx-auto ${
+        activeTab === 'ai'
+          ? 'p-2 sm:p-4 md:p-8 pb-[68px] md:pb-8 flex flex-col min-h-0'
+          : 'p-3.5 sm:p-6 md:p-8 pb-24 md:pb-8'
+      }`}>
         {activeTab === 'dashboard' && (
           <Dashboard
             user={currentUser}
@@ -412,20 +418,22 @@ export default function App() {
         />
       )}
 
-      {/* Footer - accounts for mobile bottom bar with bottom margin on small screens */}
-      <footer className="py-8 mb-20 md:mb-0 border-t border-[#e8ddd2] bg-[#f5f1eb] text-center">
-        <p className="text-[#756b63] text-xs font-medium uppercase tracking-[0.2em]">
-          Private &bull; Encrypted &bull; Intelligent
-        </p>
-      </footer>
+      {/* Footer - hidden on AI tab for full-screen chat convenience */}
+      {activeTab !== 'ai' && (
+        <footer className="py-6 mb-20 md:mb-0 border-t border-[#e8ddd2] bg-[#f5f1eb] text-center">
+          <p className="text-[#756b63] text-xs font-medium uppercase tracking-[0.2em]">
+            Private &bull; Encrypted &bull; Intelligent
+          </p>
+        </footer>
+      )}
 
-      {/* Fixed Mobile Bottom Navigation Bar (Visible only on mobile/tablet widths) */}
+      {/* Fixed Mobile Bottom Navigation Bar */}
       <nav
         id="mobile-bottom-navigation"
         aria-label="Mobile Navigation"
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#e8ddd2] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
       >
-        <div className="grid grid-cols-4 max-w-md mx-auto px-2 pt-2 pb-[max(env(safe-area-inset-bottom,0px),0.65rem)]">
+        <div className="grid grid-cols-4 max-w-md mx-auto px-2 pt-1.5 pb-[max(env(safe-area-inset-bottom,0px),0.4rem)]">
           {/* 1. Home / Dashboard */}
           <button
             id="mobile-nav-home"
