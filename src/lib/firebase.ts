@@ -16,13 +16,14 @@ import {
   collection,
   doc,
   setDoc,
+  getDoc,
   deleteDoc,
   onSnapshot,
   query,
   orderBy,
   serverTimestamp
 } from 'firebase/firestore';
-import { JournalEntry, Transaction, UserProfile, Conversation } from '../types';
+import { JournalEntry, Transaction, UserProfile, Conversation, UserPreferences, SUPPORTED_CURRENCIES } from '../types';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 
 const config = firebaseConfigJson as Record<string, any>;
@@ -76,15 +77,113 @@ export const getCurrentIdToken = async (forceRefresh = false): Promise<string | 
   return await currentUser.getIdToken(forceRefresh);
 };
 
-export const mapFirebaseUser = (user: FirebaseUser | null): UserProfile | null => {
+export const formatCurrency = (amount: number, currencyCode = 'USD'): string => {
+  const curr = SUPPORTED_CURRENCIES.find((c) => c.code === currencyCode) || SUPPORTED_CURRENCIES[0];
+  const formatted = Math.abs(amount).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  return `${amount < 0 ? '-' : ''}${curr.symbol}${formatted}`;
+};
+
+export const mapFirebaseUser = (user: FirebaseUser | null, extraPrefs?: Partial<UserProfile>): UserProfile | null => {
   if (!user) return null;
   return {
     uid: user.uid,
     email: user.email,
-    displayName: user.displayName || (user.isAnonymous ? 'Guest Explorer' : user.email?.split('@')[0] || 'Nivora User'),
+    displayName: extraPrefs?.displayName || user.displayName || (user.isAnonymous ? 'Guest Explorer' : user.email?.split('@')[0] || 'Nivora User'),
     photoURL: user.photoURL,
+    bio: extraPrefs?.bio || '',
+    currency: extraPrefs?.currency || 'USD',
     isAnonymous: user.isAnonymous
   };
+};
+
+// User Profile & Preferences (User-scoped: users/{uid}/settings/preferences)
+export const subscribeToUserPreferences = (
+  uid: string,
+  callback: (prefs: UserPreferences) => void
+) => {
+  const prefRef = doc(db, 'users', uid, 'settings', 'preferences');
+  return onSnapshot(
+    prefRef,
+    (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        callback({
+          currency: data.currency || 'USD',
+          displayName: data.displayName,
+          bio: data.bio || ''
+        });
+      } else {
+        callback({ currency: 'USD', bio: '' });
+      }
+    },
+    (err) => {
+      console.warn('Preferences subscription warning:', err);
+    }
+  );
+};
+
+export const saveUserPreferences = async (
+  uid: string,
+  prefs: Partial<UserPreferences>
+): Promise<void> => {
+  const prefRef = doc(db, 'users', uid, 'settings', 'preferences');
+  const payload = {
+    ...prefs,
+    updatedAt: new Date().toISOString(),
+    _serverTimestamp: serverTimestamp()
+  };
+
+  // Sync with Firebase Auth displayName if provided
+  if (prefs.displayName && auth.currentUser) {
+    try {
+      await updateProfile(auth.currentUser, { displayName: prefs.displayName });
+    } catch (e) {
+      console.warn('Could not update Auth displayName:', e);
+    }
+  }
+
+  // Update local cache
+  try {
+    localStorage.setItem(`nivora_prefs_${uid}`, JSON.stringify(prefs));
+  } catch (e) {}
+
+  await setDoc(prefRef, payload, { merge: true });
+};
+
+// Universal Share Helper
+export const shareContent = async (options: {
+  title: string;
+  text: string;
+  url?: string;
+}): Promise<{ success: boolean; method: 'native' | 'clipboard' }> => {
+  const shareData = {
+    title: options.title,
+    text: options.text,
+    url: options.url || window.location.href
+  };
+
+  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    try {
+      await navigator.share(shareData);
+      return { success: true, method: 'native' };
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        return { success: false, method: 'native' };
+      }
+    }
+  }
+
+  // Fallback: Copy formatted text to clipboard
+  try {
+    const textToCopy = `${options.title}\n\n${options.text}${options.url ? `\n\nLink: ${options.url}` : ''}`;
+    await navigator.clipboard.writeText(textToCopy);
+    return { success: true, method: 'clipboard' };
+  } catch (e) {
+    return { success: false, method: 'clipboard' };
+  }
 };
 
 // Journal Firestore API (User-scoped: users/{uid}/journal/{entryId})

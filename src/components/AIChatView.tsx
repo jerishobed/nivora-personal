@@ -12,7 +12,8 @@ import {
   subscribeToConversations,
   saveConversation,
   deleteConversation as deleteFirestoreConv,
-  getCurrentIdToken
+  getCurrentIdToken,
+  shareContent
 } from '../lib/firebase';
 import {
   ArrowLeft,
@@ -35,11 +36,13 @@ import {
   MessageSquare,
   X,
   RefreshCw,
-  Clock
+  Clock,
+  Share2
 } from 'lucide-react';
 
 interface AIChatViewProps {
   user: UserProfile | null;
+  currency?: string;
   journalEntries: JournalEntry[];
   transactions: Transaction[];
   onBack: () => void;
@@ -141,6 +144,7 @@ const generateSuggestedFollowUps = (lastQuery: string, lastResponse: string): st
 
 export const AIChatView: React.FC<AIChatViewProps> = ({
   user,
+  currency = 'USD',
   journalEntries,
   transactions,
   onBack,
@@ -153,6 +157,7 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
   const [inputQuery, setInputQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [sharedMsgId, setSharedMsgId] = useState<string | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -330,7 +335,8 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
           prompt: query,
           journalEntries,
           transactions,
-          conversationHistory: historyPayload
+          conversationHistory: historyPayload,
+          currency
         })
       });
 
@@ -664,6 +670,31 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
                                   <>
                                     <Copy className="w-3.5 h-3.5" />
                                     <span className="text-[11px]">Copy</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                onClick={async () => {
+                                  const shareText = `✨ NIVORA AI Insight:\n\n${msg.text}\n\nShared via NIVORA`;
+                                  const res = await shareContent({ title: 'NIVORA AI Insight', text: shareText });
+                                  if (res.success) {
+                                    setSharedMsgId(msg.id);
+                                    setTimeout(() => setSharedMsgId(null), 2000);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 p-1.5 rounded-[8px] hover:bg-[#f5f1eb] hover:text-[#1f1b18] transition-colors cursor-pointer"
+                                title="Share insight"
+                              >
+                                {sharedMsgId === msg.id ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-[#2e7d32]" />
+                                    <span className="text-[11px] text-[#2e7d32] font-semibold">Shared</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Share2 className="w-3.5 h-3.5" />
+                                    <span className="text-[11px]">Share</span>
                                   </>
                                 )}
                               </button>

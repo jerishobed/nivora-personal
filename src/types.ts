@@ -1,8 +1,34 @@
+export interface CurrencyConfig {
+  code: string;
+  symbol: string;
+  name: string;
+}
+
+export const SUPPORTED_CURRENCIES: CurrencyConfig[] = [
+  { code: 'USD', symbol: '$', name: 'US Dollar ($)' },
+  { code: 'EUR', symbol: '€', name: 'Euro (€)' },
+  { code: 'GBP', symbol: '£', name: 'British Pound (£)' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee (₹)' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen (¥)' },
+  { code: 'CAD', symbol: 'CA$', name: 'Canadian Dollar (CA$)' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar (A$)' },
+  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar (S$)' },
+  { code: 'AED', symbol: 'AED', name: 'UAE Dirham (AED)' }
+];
+
+export interface UserPreferences {
+  currency: string;
+  displayName?: string;
+  bio?: string;
+}
+
 export interface UserProfile {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  bio?: string;
+  currency?: string;
   isAnonymous?: boolean;
 }
 

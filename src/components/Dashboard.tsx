@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UserProfile, JournalEntry, Transaction, ViewTab } from '../types';
 import { UserCard } from './UserCard';
+import { formatCurrency, shareContent } from '../lib/firebase';
 import {
   BookOpen,
   Wallet,
@@ -11,15 +12,19 @@ import {
   Plus,
   Calendar,
   Layers,
-  Sparkle
+  Sparkle,
+  Share2,
+  Check
 } from 'lucide-react';
 
 interface DashboardProps {
   user: UserProfile;
+  currency?: string;
   journalEntries: JournalEntry[];
   transactions: Transaction[];
   onNavigate: (tab: ViewTab) => void;
   onSignOut: () => void;
+  onOpenSettings?: () => void;
   onSeedData: () => void;
   onNewJournal: () => void;
   onNewTransaction: () => void;
@@ -28,15 +33,19 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({
   user,
+  currency = 'USD',
   journalEntries,
   transactions,
   onNavigate,
   onSignOut,
+  onOpenSettings,
   onSeedData,
   onNewJournal,
   onNewTransaction,
   seedingLoading = false
 }) => {
+  const [shareCopied, setShareCopied] = useState(false);
+
   // Compute Financial Summaries
   let totalIncome = 0;
   let totalExpense = 0;
@@ -48,40 +57,89 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const hasData = journalEntries.length > 0 || transactions.length > 0;
 
+  const handleShareSummary = async () => {
+    const summaryText = `🌿 NIVORA Summary for ${user.displayName || 'Nivora User'}:\n` +
+      `• Journal Reflections: ${journalEntries.length}\n` +
+      `• Total Income: ${formatCurrency(totalIncome, currency)}\n` +
+      `• Total Expenses: ${formatCurrency(totalExpense, currency)}\n` +
+      `• Net Balance: ${formatCurrency(netBalance, currency)}\n` +
+      `\nTrack reflections and wealth securely on NIVORA.`;
+
+    const res = await shareContent({
+      title: 'NIVORA — Personal Intelligence Summary',
+      text: summaryText
+    });
+    if (res.success) {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    }
+  };
+
   return (
     <div id="nivora-dashboard" className="space-y-7">
       {/* Top User Header Card */}
-      <UserCard user={user} onSignOut={onSignOut} />
+      <UserCard
+        user={user}
+        currency={currency}
+        onSignOut={onSignOut}
+        onOpenSettings={onOpenSettings}
+      />
 
       {/* Welcome / Quick Stats Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white/90 border border-[#e8ddd2] rounded-[18px] p-4 shadow-2xs">
-          <p className="text-xs text-[#756b63] font-medium">Journal Entries</p>
-          <p className="text-xl sm:text-2xl font-bold text-[#1f1b18] mt-1">
-            {journalEntries.length}
-          </p>
+      <div>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h3 className="text-xs font-bold text-[#756b63] uppercase tracking-wider">
+            Workspace Overview
+          </h3>
+          {hasData && (
+            <button
+              onClick={handleShareSummary}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#7b4a27] hover:text-[#63391d] cursor-pointer bg-white px-2.5 py-1 rounded-[10px] border border-[#e8ddd2] hover:bg-[#f5f1eb] transition-colors"
+            >
+              {shareCopied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#2e7d32]" />
+                  <span className="text-[#2e7d32]">Summary Shared!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Share Summary</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
-        <div className="bg-white/90 border border-[#e8ddd2] rounded-[18px] p-4 shadow-2xs">
-          <p className="text-xs text-[#756b63] font-medium">Total Income</p>
-          <p className="text-xl sm:text-2xl font-bold text-[#2e7d32] mt-1 truncate">
-            ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-        <div className="bg-white/90 border border-[#e8ddd2] rounded-[18px] p-4 shadow-2xs">
-          <p className="text-xs text-[#756b63] font-medium">Total Expenses</p>
-          <p className="text-xl sm:text-2xl font-bold text-[#7b4a27] mt-1 truncate">
-            ${totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-        <div className="bg-white/90 border border-[#e8ddd2] rounded-[18px] p-4 shadow-2xs">
-          <p className="text-xs text-[#756b63] font-medium">Net Balance</p>
-          <p
-            className={`text-xl sm:text-2xl font-bold mt-1 truncate ${
-              netBalance >= 0 ? 'text-[#1f1b18]' : 'text-[#c62828]'
-            }`}
-          >
-            {netBalance >= 0 ? '+' : ''}${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white/90 border border-[#e8ddd2] rounded-[18px] p-4 shadow-2xs">
+            <p className="text-xs text-[#756b63] font-medium">Journal Entries</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#1f1b18] mt-1">
+              {journalEntries.length}
+            </p>
+          </div>
+          <div className="bg-white/90 border border-[#e8ddd2] rounded-[18px] p-4 shadow-2xs">
+            <p className="text-xs text-[#756b63] font-medium">Total Income</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#2e7d32] mt-1 truncate">
+              {formatCurrency(totalIncome, currency)}
+            </p>
+          </div>
+          <div className="bg-white/90 border border-[#e8ddd2] rounded-[18px] p-4 shadow-2xs">
+            <p className="text-xs text-[#756b63] font-medium">Total Expenses</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#7b4a27] mt-1 truncate">
+              {formatCurrency(totalExpense, currency)}
+            </p>
+          </div>
+          <div className="bg-white/90 border border-[#e8ddd2] rounded-[18px] p-4 shadow-2xs">
+            <p className="text-xs text-[#756b63] font-medium">Net Balance</p>
+            <p
+              className={`text-xl sm:text-2xl font-bold mt-1 truncate ${
+                netBalance >= 0 ? 'text-[#1f1b18]' : 'text-[#c62828]'
+              }`}
+            >
+              {netBalance >= 0 ? '+' : ''}{formatCurrency(netBalance, currency)}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -128,7 +186,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </p>
           <div className="mt-auto w-full pt-4 border-t border-[#f5f1eb]">
             <div className="text-xs text-[#7b4a27] mb-3 uppercase tracking-wider font-bold truncate">
-              Balance: ${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              Balance: {formatCurrency(netBalance, currency)}
             </div>
             <button
               onClick={() => onNavigate('finance')}
@@ -324,7 +382,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         t.type === 'income' ? 'text-[#2e7d32]' : 'text-[#1f1b18]'
                       }`}
                     >
-                      {t.type === 'income' ? '+' : '-'}${t.amount.toFixed(2)}
+                      {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, currency)}
                     </span>
                   </div>
                 ))}

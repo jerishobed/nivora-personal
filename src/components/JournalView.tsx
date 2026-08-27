@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { JournalEntry } from '../types';
+import { shareContent } from '../lib/firebase';
 import {
   ArrowLeft,
   Plus,
@@ -13,7 +14,8 @@ import {
   Tag,
   Smile,
   ArrowUpDown,
-  Sparkle
+  Sparkle,
+  Share2
 } from 'lucide-react';
 
 interface JournalViewProps {
@@ -45,6 +47,7 @@ export const JournalView: React.FC<JournalViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [selectedMood, setSelectedMood] = useState<string>('all');
+  const [sharedEntryId, setSharedEntryId] = useState<string | null>(null);
 
   // Modal / Form state
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -317,6 +320,24 @@ export const JournalView: React.FC<JournalViewProps> = ({
                   {/* Actions */}
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <button
+                      onClick={async () => {
+                        const text = `📖 Reflection: "${entry.title || 'Untitled'}" (${entry.date})\n\n${entry.content}\n\nShared via NIVORA`;
+                        const res = await shareContent({ title: entry.title || 'Journal Reflection', text });
+                        if (res.success) {
+                          setSharedEntryId(entry.id);
+                          setTimeout(() => setSharedEntryId(null), 2000);
+                        }
+                      }}
+                      className="p-1.5 rounded-[10px] text-[#756b63] hover:text-[#7b4a27] hover:bg-[#f5f1eb] transition-colors cursor-pointer"
+                      title="Share reflection"
+                    >
+                      {sharedEntryId === entry.id ? (
+                        <Check className="w-3.5 h-3.5 text-[#2e7d32]" />
+                      ) : (
+                        <Share2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <button
                       onClick={() => openEditEntry(entry)}
                       className="p-1.5 rounded-[10px] text-[#756b63] hover:text-[#7b4a27] hover:bg-[#f5f1eb] transition-colors cursor-pointer"
                       title="Edit reflection"
@@ -527,6 +548,29 @@ export const JournalView: React.FC<JournalViewProps> = ({
                 {readingEntry.wordCount || readingEntry.content.split(/\s+/).filter(Boolean).length} words
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    const text = `📖 Reflection: "${readingEntry.title || 'Untitled'}" (${readingEntry.date})\n\n${readingEntry.content}\n\nShared via NIVORA`;
+                    const res = await shareContent({ title: readingEntry.title || 'Journal Reflection', text });
+                    if (res.success) {
+                      setSharedEntryId(readingEntry.id);
+                      setTimeout(() => setSharedEntryId(null), 2000);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[14px] bg-white border border-[#dfd3c7] hover:bg-[#eee7de] text-xs font-semibold text-[#756b63] hover:text-[#1f1b18] transition-colors cursor-pointer"
+                >
+                  {sharedEntryId === readingEntry.id ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-[#2e7d32]" />
+                      <span className="text-[#2e7d32]">Shared!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5 text-[#7b4a27]" />
+                      <span>Share</span>
+                    </>
+                  )}
+                </button>
                 <button
                   onClick={() => {
                     const e = readingEntry;

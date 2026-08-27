@@ -50,7 +50,7 @@ interface RateLimitRecord {
 }
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute window
-const MAX_REQUESTS_PER_WINDOW = 20; // 20 requests per user per minute
+const MAX_REQUESTS_PER_WINDOW = 10; // 10 requests per user per minute (strict zero-cost ceiling)
 const userRateLimits = new Map<string, RateLimitRecord>();
 
 // Periodic garbage collection to prevent memory leaks from inactive sessions (every 5 minutes)
@@ -370,11 +370,10 @@ app.post(
   async (req: Request, res: Response) => {
     try {
       const authenticatedUser = (req as AuthenticatedRequest).user;
-      const { prompt, journalEntries = [], transactions = [], conversationHistory = [] } = req.body;
+      const { prompt, journalEntries = [], transactions = [], conversationHistory = [], currency = 'USD' } = req.body;
 
-      const ai = getAiClient();
+    const ai = getAiClient();
 
-    // Summarize finances for context
     let totalIncome = 0;
     let totalExpense = 0;
     const categoryTotals: Record<string, number> = {};
@@ -400,18 +399,21 @@ app.post(
       : 'No journal entries recorded yet.';
 
     const financeContext = transactions.length > 0
-      ? `Financial Summary:
-- Total Income: $${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-- Total Expenses: $${totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-- Current Net Balance: $${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+      ? `Financial Summary (Currency: ${currency}):
+- Total Income: ${currency} ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+- Total Expenses: ${currency} ${totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+- Current Net Balance: ${currency} ${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
 - Expense Category Breakdown:
-${Object.entries(categoryTotals).map(([cat, amt]) => `  • ${cat}: $${amt.toFixed(2)}`).join('\n')}
+${Object.entries(categoryTotals).map(([cat, amt]) => `  • ${cat}: ${currency} ${amt.toFixed(2)}`).join('\n')}
 
 Recent Transactions (last 25):
-${transactions.slice(0, 25).map((t: any) => `• [${t.date}] ${t.type.toUpperCase()}: $${Number(t.amount).toFixed(2)} (${t.category}) - ${t.description}`).join('\n')}`
+${transactions.slice(0, 25).map((t: any) => `• [${t.date}] ${t.type.toUpperCase()}: ${currency} ${Number(t.amount).toFixed(2)} (${t.category}) - ${t.description}`).join('\n')}`
       : 'No financial transactions recorded yet.';
 
     const systemInstruction = `You are NIVORA AI, the dedicated, private personal intelligence assistant built into NIVORA (Personal Journal, Finance Intelligence & AI Insights).
+
+USER CONFIGURATION:
+- Preferred Currency: ${currency} (Always express financial figures, balance, and monetary recommendations in ${currency})
 
 YOUR CORE RESPONSIBILITIES:
 1. Provide thoughtful, intelligent, empathetic, and analytical answers connecting the user's reflections, mindset, and financial decisions.
@@ -420,6 +422,7 @@ YOUR CORE RESPONSIBILITIES:
 
 RESPONSE FORMATTING GUIDELINES:
 - Structure your response cleanly using Markdown.
+- Keep responses concise and focused.
 - Use intuitive, scannable sections:
   ### 🌿 Insight
   A clear, focused synthesis of what the data shows.
@@ -429,20 +432,18 @@ RESPONSE FORMATTING GUIDELINES:
   Actionable, realistic, bullet-pointed suggestions.
 - Keep the tone calm, premium, respectful, encouraging, and razor-sharp. Avoid generic fluff or cliches.`;
 
+    // Multi-turn conversation context
     const conversationContext = Array.isArray(conversationHistory) && conversationHistory.length > 0
-      ? conversationHistory
-          .slice(-8)
-          .map((msg: any) => `${msg.sender === 'user' ? 'USER' : 'NIVORA AI'}: ${msg.text}`)
-          .join('\n\n')
+      ? conversationHistory.map((m: any) => `${m.sender === 'user' ? 'User' : 'NIVORA AI'}: ${m.text}`).join('\n\n')
       : '';
 
-    const userMessage = `User's Data Context:
+    const userMessage = `AUTHENTIC USER DATA ISOLATED CONTEXT:
 ===============================
 JOURNAL ENTRIES (${journalEntries.length} total):
 ${journalContext}
 
 ===============================
-FINANCIAL DATA (${transactions.length} transactions):
+FINANCIAL DATA (${transactions.length} transactions, Currency: ${currency}):
 ${financeContext}
 
 ${conversationContext ? `===============================\nPREVIOUS CONVERSATION HISTORY:\n${conversationContext}\n` : ''}===============================
@@ -451,12 +452,12 @@ CURRENT USER QUESTION / FOLLOW-UP:
 
 Please directly answer the current user question or follow-up in the context of the previous conversation and their authentic records.`;
 
-    // Call Gemini with current official models (Fast / Lite / Flash)
+    // Call Gemini with free-tier ultra-fast models prioritized for zero-cost operation
     const candidateModels = [
-      'gemini-3.6-flash',
-      'gemini-3.5-flash',
       'gemini-3.1-flash-lite',
-      'gemini-3.7-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+      'gemini-3.6-flash',
       'gemini-flash-lite-latest'
     ];
 
@@ -476,7 +477,7 @@ Please directly answer the current user question or follow-up in the context of 
           config: {
             systemInstruction,
             temperature: 0.4,
-            maxOutputTokens: 1500
+            maxOutputTokens: 900 // Clamped for zero-cost operation
           }
         });
         if (response?.text) break;
@@ -550,10 +551,10 @@ Output strictly valid JSON matching this schema:
 }`;
 
     const candidateModels = [
-      'gemini-3.6-flash',
-      'gemini-3.5-flash',
       'gemini-3.1-flash-lite',
-      'gemini-3.7-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+      'gemini-3.6-flash',
       'gemini-flash-lite-latest'
     ];
 
@@ -565,7 +566,8 @@ Output strictly valid JSON matching this schema:
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           config: {
             responseMimeType: 'application/json',
-            temperature: 0.3
+            temperature: 0.3,
+            maxOutputTokens: 600
           }
         });
         if (response?.text) break;

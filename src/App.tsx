@@ -10,15 +10,18 @@ import {
   deleteJournalEntry,
   saveTransaction,
   deleteTransaction,
-  seedSampleData
+  seedSampleData,
+  subscribeToUserPreferences,
+  saveUserPreferences
 } from './lib/firebase';
-import { UserProfile, JournalEntry, Transaction, ViewTab } from './types';
+import { UserProfile, JournalEntry, Transaction, ViewTab, UserPreferences } from './types';
 import { LandingPage } from './components/LandingPage';
 import { BrandHeader } from './components/BrandHeader';
 import { Dashboard } from './components/Dashboard';
 import { JournalView } from './components/JournalView';
 import { FinanceView } from './components/FinanceView';
 import { AIChatView } from './components/AIChatView';
+import { SettingsModal } from './components/SettingsModal';
 import {
   LayoutDashboard,
   BookOpen,
@@ -26,13 +29,21 @@ import {
   Sparkles,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ViewTab>('dashboard');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // User preferences state
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    currency: 'USD',
+    bio: ''
+  });
 
   // Firestore collections state
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
@@ -87,11 +98,66 @@ export default function App() {
       }
     );
 
+    const unsubPrefs = subscribeToUserPreferences(
+      currentUser.uid,
+      (prefs) => {
+        setPreferences(prefs);
+        setCurrentUser((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            displayName: prefs.displayName || prev.displayName,
+            bio: prefs.bio || '',
+            currency: prefs.currency || 'USD'
+          };
+        });
+      }
+    );
+
     return () => {
       unsubJournal();
       unsubTransactions();
+      unsubPrefs();
     };
   }, [currentUser?.uid]);
+
+  const handleSavePreferences = async (newPrefs: Partial<UserPreferences>) => {
+    if (!currentUser?.uid) return;
+    try {
+      await saveUserPreferences(currentUser.uid, newPrefs);
+      setPreferences((prev) => ({ ...prev, ...newPrefs }));
+      if (newPrefs.displayName) {
+        setCurrentUser((prev) => prev ? { ...prev, displayName: newPrefs.displayName! } : null);
+      }
+      showToast('Preferences updated.');
+    } catch (err) {
+      console.error('Error updating preferences:', err);
+      showToast('Unable to update preferences.', 'error');
+    }
+  };
+
+  const handleExportData = () => {
+    const dataToExport = {
+      user: {
+        displayName: currentUser?.displayName,
+        email: currentUser?.email,
+        currency: preferences.currency,
+        bio: preferences.bio
+      },
+      exportedAt: new Date().toISOString(),
+      journalEntries,
+      transactions
+    };
+
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nivora-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Data exported successfully.');
+  };
 
   const handleSignOut = async () => {
     try {
@@ -259,6 +325,15 @@ export default function App() {
           {/* Top Quick Actions */}
           <div className="flex items-center gap-2.5">
             <button
+              id="header-settings-btn"
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 rounded-[12px] text-[#756b63] hover:text-[#1f1b18] hover:bg-[#f5f1eb] transition-colors cursor-pointer"
+              title="Settings & Preferences"
+              aria-label="Open settings"
+            >
+              <Settings className="w-4 h-4 text-[#7b4a27]" />
+            </button>
+            <button
               id="header-ask-ai-btn"
               onClick={() => setActiveTab('ai')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[14px] bg-[#f3e8dc] hover:bg-[#ebd9c7] text-[#7b4a27] text-xs font-semibold transition-colors cursor-pointer"
@@ -275,10 +350,12 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <Dashboard
             user={currentUser}
+            currency={preferences.currency}
             journalEntries={journalEntries}
             transactions={transactions}
             onNavigate={setActiveTab}
             onSignOut={handleSignOut}
+            onOpenSettings={() => setIsSettingsOpen(true)}
             onSeedData={handleSeedData}
             onNewJournal={() => setActiveTab('journal')}
             onNewTransaction={() => setActiveTab('finance')}
@@ -300,6 +377,7 @@ export default function App() {
         {activeTab === 'finance' && (
           <FinanceView
             transactions={transactions}
+            currency={preferences.currency}
             onBack={() => setActiveTab('dashboard')}
             onSaveTransaction={handleSaveTransaction}
             onDeleteTransaction={handleDeleteTransaction}
@@ -311,6 +389,7 @@ export default function App() {
         {activeTab === 'ai' && (
           <AIChatView
             user={currentUser}
+            currency={preferences.currency}
             journalEntries={journalEntries}
             transactions={transactions}
             onBack={() => setActiveTab('dashboard')}
@@ -318,6 +397,20 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Settings Modal */}
+      {isSettingsOpen && currentUser && (
+        <SettingsModal
+          user={currentUser}
+          preferences={preferences}
+          onSavePreferences={handleSavePreferences}
+          onClose={() => setIsSettingsOpen(false)}
+          onSignOut={handleSignOut}
+          journalCount={journalEntries.length}
+          transactionCount={transactions.length}
+          onExportData={handleExportData}
+        />
+      )}
 
       {/* Footer - accounts for mobile bottom bar with bottom margin on small screens */}
       <footer className="py-8 mb-20 md:mb-0 border-t border-[#e8ddd2] bg-[#f5f1eb] text-center">

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Transaction, TransactionType } from '../types';
+import { Transaction, TransactionType, SUPPORTED_CURRENCIES } from '../types';
+import { formatCurrency, shareContent } from '../lib/firebase';
 import {
   ArrowLeft,
   Plus,
@@ -15,11 +16,14 @@ import {
   Filter,
   DollarSign,
   ArrowUpDown,
-  Sparkle
+  Sparkle,
+  Share2,
+  Check
 } from 'lucide-react';
 
 interface FinanceViewProps {
   transactions: Transaction[];
+  currency?: string;
   onBack: () => void;
   onSaveTransaction: (transaction: Omit<Transaction, 'id'> & { id?: string }) => Promise<void>;
   onDeleteTransaction: (transId: string) => Promise<void>;
@@ -42,6 +46,7 @@ const EXPENSE_CATEGORIES = [
 
 export const FinanceView: React.FC<FinanceViewProps> = ({
   transactions,
+  currency = 'USD',
   onBack,
   onSaveTransaction,
   onDeleteTransaction,
@@ -52,6 +57,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
+  const [shareSuccess, setShareSuccess] = useState(false);
 
   // Modal State
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -209,7 +215,41 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {transactions.length > 0 && (
+            <button
+              id="finance-share-btn"
+              onClick={async () => {
+                const text = `💰 NIVORA Financial Report:\n` +
+                  `• Total Income: ${formatCurrency(totalIncome, currency)}\n` +
+                  `• Total Expenses: ${formatCurrency(totalExpense, currency)}\n` +
+                  `• Net Balance: ${formatCurrency(netBalance, currency)}\n` +
+                  `• Top Expense Category: ${topCategory}\n` +
+                  `• Total Records: ${transactions.length}\n` +
+                  `\nTrack your wealth securely on NIVORA.`;
+                const res = await shareContent({ title: 'NIVORA Financial Report', text });
+                if (res.success) {
+                  setShareSuccess(true);
+                  setTimeout(() => setShareSuccess(false), 2500);
+                }
+              }}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[14px] bg-white border border-[#dfd3c7] hover:bg-[#eee7de] text-[#756b63] hover:text-[#1f1b18] text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              title="Share or copy financial snapshot"
+            >
+              {shareSuccess ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#2e7d32]" />
+                  <span className="text-[#2e7d32]">Shared!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-[#7b4a27]" />
+                  <span>Share Report</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
             id="finance-add-expense-btn"
             onClick={() => openNewTransaction('expense')}
@@ -240,7 +280,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             </div>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-[#2e7d32]">
-            ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatCurrency(totalIncome, currency)}
           </p>
           <p className="text-[11px] text-[#756b63] mt-1">Recorded inflows</p>
         </div>
@@ -254,7 +294,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             </div>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-[#7b4a27]">
-            ${totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatCurrency(totalExpense, currency)}
           </p>
           <p className="text-[11px] text-[#756b63] mt-1">
             Top category: <span className="font-semibold text-[#1f1b18]">{topCategory}</span>
@@ -274,7 +314,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               netBalance >= 0 ? 'text-[#1f1b18]' : 'text-[#c62828]'
             }`}
           >
-            {netBalance >= 0 ? '+' : ''}${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {netBalance >= 0 ? '+' : ''}{formatCurrency(netBalance, currency)}
           </p>
           <p className="text-[11px] text-[#756b63] mt-1">
             {totalIncome > 0 ? `${Math.round((netBalance / totalIncome) * 100)}% net retained` : 'Awaiting income'}
@@ -291,7 +331,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               <span>Expense Categories</span>
             </h4>
             <span className="text-xs text-[#756b63]">
-              ${totalExpense.toFixed(2)} total
+              {formatCurrency(totalExpense, currency)} total
             </span>
           </div>
 
@@ -306,7 +346,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-[#1f1b18]">{cat}</span>
                       <span className="text-[#756b63]">
-                        ${amt.toFixed(2)} <span className="text-[10px]">({percent}%)</span>
+                        {formatCurrency(amt, currency)} <span className="text-[10px]">({percent}%)</span>
                       </span>
                     </div>
                     <div className="w-full bg-[#f5f1eb] rounded-full h-2 overflow-hidden border border-[#e8ddd2]/50">
@@ -480,7 +520,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                       t.type === 'income' ? 'text-[#2e7d32]' : 'text-[#1f1b18]'
                     }`}
                   >
-                    {t.type === 'income' ? '+' : '-'}${t.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, currency)}
                   </span>
 
                   <div className="flex items-center gap-1">
@@ -577,7 +617,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               {/* Amount */}
               <div>
                 <label className="block text-xs font-medium text-[#756b63] mb-1">
-                  Amount ($)
+                  Amount ({SUPPORTED_CURRENCIES.find((c) => c.code === currency)?.symbol || '$'})
                 </label>
                 <div className="relative">
                   <DollarSign className="w-4 h-4 text-[#756b63] absolute left-3.5 top-3" />
