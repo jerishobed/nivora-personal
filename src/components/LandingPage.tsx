@@ -3,9 +3,7 @@ import { BrandHeader } from './BrandHeader';
 import { AuthModal } from './AuthModal';
 import { BookOpen, Wallet, Sparkles, ArrowRight, ShieldCheck, Lock, BrainCircuit } from 'lucide-react';
 
-interface LandingPageProps {
-  onDemoStart?: () => void;
-}
+interface LandingPageProps {}
 
 export const LandingPage: React.FC<LandingPageProps> = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
